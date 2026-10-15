@@ -18,8 +18,8 @@ tags:
 summary: Index and guidelines for REST API specifications, DTO schemas, and OpenAPI standards.
 related_docs:
   - documentation/README.md
-  - documentation/04_api/api-design-guidelines.md
-  - documentation/04_api/api-overview.md
+  - documentation/04_api/v1.0.0-2026-10-15-api-design-guidelines.md
+  - documentation/04_api/v0.1.0-2026-10-15-api-overview.md
 is_template: false
 ---
 
@@ -29,8 +29,8 @@ is_template: false
 Define API design standards, contract specifications for endpoints across all feature modules, error formats, and OpenAPI/Swagger synchronization.
 
 ## 2. Directory Contents
-- [`api-design-guidelines.md`](api-design-guidelines.md): REST conventions, pagination, HTTP status codes, and uniform response payloads.
-- [`api-overview.md`](api-overview.md): Complete catalog of endpoints planned for Phase 1.
+- [`v1.0.0-2026-10-15-api-design-guidelines.md`](v1.0.0-2026-10-15-api-design-guidelines.md): REST conventions, pagination, HTTP status codes, and uniform response payloads.
+- [`v0.1.0-2026-10-15-api-overview.md`](v0.1.0-2026-10-15-api-overview.md): Complete catalog of endpoints planned for Phase 1.
 - [`TEMPLATE.md`](TEMPLATE.md): Endpoint specification template.
 
 ## 3. Interactive Documentation

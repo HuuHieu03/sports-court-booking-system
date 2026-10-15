@@ -26,10 +26,10 @@ is_template: false
 This directory governs how documentation is created, structured, updated, verified, and archived within the project repository. It provides the single source of truth for repository conventions and team standards.
 
 ## 2. Directory Contents
-- [`metadata-schema.md`](metadata-schema.md): The canonical specification for YAML Front Matter fields and enum values.
-- [`documentation-conventions.md`](documentation-conventions.md): Formatting rules, Markdown style, and link guidelines.
-- [`documentation-lifecycle.md`](documentation-lifecycle.md): State transitions from draft to approval, promotion from personal workspace, and deprecation.
-- [`ai-collaboration-guide.md`](ai-collaboration-guide.md): Operational rules for human-agent pair programming and automated coding agents.
+- [`v1.0.0-2026-10-15-metadata-schema.md`](v1.0.0-2026-10-15-metadata-schema.md): The canonical specification for YAML Front Matter fields and enum values.
+- [`v1.0.0-2026-10-15-documentation-conventions.md`](v1.0.0-2026-10-15-documentation-conventions.md): Formatting rules, Markdown style, and link guidelines.
+- [`v1.0.0-2026-10-15-documentation-lifecycle.md`](v1.0.0-2026-10-15-documentation-lifecycle.md): State transitions from draft to approval, promotion from personal workspace, and deprecation.
+- [`v1.0.0-2026-10-15-ai-collaboration-guide.md`](v1.0.0-2026-10-15-ai-collaboration-guide.md): Operational rules for human-agent pair programming and automated coding agents.
 
 ## 3. What Belongs Here
 - Global governance policies.

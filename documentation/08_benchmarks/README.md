@@ -18,7 +18,7 @@ tags:
 summary: Index and protocols for performance experiment plans, baseline runs, and Phase 2 comparative benchmarks on Kaggle CPU.
 related_docs:
   - documentation/README.md
-  - documentation/08_benchmarks/kaggle-benchmark-environment.md
+  - documentation/08_benchmarks/v1.0.0-2026-10-15-kaggle-benchmark-environment.md
   - benchmarks/README.md
 is_template: false
 ---
@@ -37,5 +37,5 @@ Document rigorous, reproducible load-testing experiment plans, baseline performa
   5. Explaining empirical gains with statistical evidence.
 
 ## 3. Directory Contents
-- [`kaggle-benchmark-environment.md`](kaggle-benchmark-environment.md): Detailed hardware/software setup instructions for Kaggle CPU.
+- [`v1.0.0-2026-10-15-kaggle-benchmark-environment.md`](v1.0.0-2026-10-15-kaggle-benchmark-environment.md): Detailed hardware/software setup instructions for Kaggle CPU.
 - [`TEMPLATE.md`](TEMPLATE.md): Formal experiment report template.

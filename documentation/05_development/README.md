@@ -17,7 +17,7 @@ tags:
 summary: Work breakdown structures, sprint roadmaps, integration plans, and team progress tracking.
 related_docs:
   - documentation/README.md
-  - documentation/05_development/phase-1-implementation-plan.md
+  - documentation/05_development/v0.1.0-2026-10-15-phase-1-implementation-plan.md
 is_template: false
 ---
 
@@ -27,7 +27,7 @@ is_template: false
 Coordinate team engineering activities, technical work breakdowns, sprint milestones, and formal team worklogs.
 
 ## 2. Directory Contents
-- [`phase-1-implementation-plan.md`](phase-1-implementation-plan.md): Step-by-step development roadmap for Phase 1 basic functionalities.
+- [`v0.1.0-2026-10-15-phase-1-implementation-plan.md`](v0.1.0-2026-10-15-phase-1-implementation-plan.md): Step-by-step development roadmap for Phase 1 basic functionalities.
 - [`TEMPLATE.md`](TEMPLATE.md): Development sprint plan / team worklog template.
 
 ## 3. Team Worklog vs Personal Worklog

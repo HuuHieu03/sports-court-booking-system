@@ -17,7 +17,7 @@ tags:
 summary: Strategy, test plans, scenario matrices, and test automation standards.
 related_docs:
   - documentation/README.md
-  - documentation/06_testing/testing-strategy.md
+  - documentation/06_testing/v1.0.0-2026-10-15-testing-strategy.md
 is_template: false
 ---
 
@@ -27,7 +27,7 @@ is_template: false
 Define testing methodologies, the automated test pyramid, coverage requirements, and integration test scenarios across all modules.
 
 ## 2. Directory Contents
-- [`testing-strategy.md`](testing-strategy.md): The overall testing philosophy, layers, and tooling guidelines.
+- [`v1.0.0-2026-10-15-testing-strategy.md`](v1.0.0-2026-10-15-testing-strategy.md): The overall testing philosophy, layers, and tooling guidelines.
 - [`TEMPLATE.md`](TEMPLATE.md): Test plan / test scenario specification template.
 
 ## 3. Test Execution Commands

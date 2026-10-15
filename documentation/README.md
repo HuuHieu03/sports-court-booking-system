@@ -42,15 +42,15 @@ The Sports Court Booking System provides a robust, multi-tenant capable platform
 
 | Directory | Purpose | Key Initial Documents |
 | :--- | :--- | :--- |
-| [`00_governance/`](00_governance/README.md) | Metadata schema, conventions, lifecycle & AI collaboration rules | `metadata-schema.md`, `documentation-conventions.md`, `ai-collaboration-guide.md` |
-| [`01_product/`](01_product/README.md) | Problem statement, target personas, scope, and use cases | `problem-statement.md`, `scope-and-actors.md` |
-| [`02_requirements/`](02_requirements/README.md) | Functional & non-functional requirements, business constraints | `functional-requirements.md`, `non-functional-requirements.md` |
-| [`03_architecture/`](03_architecture/README.md) | Architectural views, module boundaries, C4/Mermaid diagrams, ADRs | `architecture-overview.md`, `adr-0001-modular-monolith-layered-architecture.md` |
-| [`04_api/`](04_api/README.md) | REST API specifications, contracts, and OpenAPI documentation | `api-design-guidelines.md`, `api-overview.md` |
-| [`05_development/`](05_development/README.md) | Implementation roadmaps, technical integration guides, sprint plans | `phase-1-implementation-plan.md` |
-| [`06_testing/`](06_testing/README.md) | Testing pyramid, unit/integration/e2e test strategies | `testing-strategy.md` |
+| [`00_governance/`](00_governance/README.md) | Metadata schema, conventions, lifecycle & AI collaboration rules | `v1.0.0-2026-10-15-metadata-schema.md`, `v1.0.0-2026-10-15-documentation-conventions.md` |
+| [`01_product/`](01_product/README.md) | Problem statement, target personas, scope, and use cases | `v0.1.0-2026-10-15-problem-statement.md`, `v0.1.0-2026-10-15-scope-and-actors.md` |
+| [`02_requirements/`](02_requirements/README.md) | Functional & non-functional requirements, business constraints | `v0.1.0-2026-10-15-functional-requirements.md`, `v0.1.0-2026-10-15-non-functional-requirements.md` |
+| [`03_architecture/`](03_architecture/README.md) | Architectural views, module boundaries, C4/Mermaid diagrams, ADRs | `v1.0.0-2026-10-15-architecture-overview.md`, `v1.0.0-2026-10-15-adr-0001-...` |
+| [`04_api/`](04_api/README.md) | REST API specifications, contracts, and OpenAPI documentation | `v1.0.0-2026-10-15-api-design-guidelines.md`, `v0.1.0-2026-10-15-api-overview.md` |
+| [`05_development/`](05_development/README.md) | Implementation roadmaps, technical integration guides, sprint plans | `v0.1.0-2026-10-15-phase-1-implementation-plan.md` |
+| [`06_testing/`](06_testing/README.md) | Testing pyramid, unit/integration/e2e test strategies | `v1.0.0-2026-10-15-testing-strategy.md` |
 | [`07_meetings/`](07_meetings/README.md) | Team meeting minutes, discussions, decision records, action items | *Use directory template for new minutes* |
-| [`08_benchmarks/`](08_benchmarks/README.md) | Kaggle CPU load-testing environment, baseline and Phase 2 benchmarks | `kaggle-benchmark-environment.md` |
+| [`08_benchmarks/`](08_benchmarks/README.md) | Kaggle CPU load-testing environment, baseline and Phase 2 benchmarks | `v1.0.0-2026-10-15-kaggle-benchmark-environment.md` |
 | [`09_reports/`](09_reports/README.md) | Formal course deliverables, Phase 1 & Phase 2 submission reports | *Course report drafts & templates* |
 | [`99_archive/`](99_archive/README.md) | Superseded or obsolete design documents | *Archived historical artifacts* |
 

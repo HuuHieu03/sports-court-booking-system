@@ -17,12 +17,12 @@ Welcome, AI Coding Agent. This document defines the engineering standards, archi
 
 ## 2. Authoritative Documentation
 Before writing or altering any code, you MUST consult the shared documentation under `documentation/`:
-- **Architecture Blueprints & Rules:** `documentation/03_architecture/architecture-overview.md`
-- **Ratified ADRs:** `documentation/03_architecture/adr-*.md`
-- **Functional Requirements:** `documentation/02_requirements/functional-requirements.md`
-- **API Contracts:** `documentation/04_api/api-overview.md` & `api-design-guidelines.md`
-- **Metadata Schema:** `documentation/00_governance/metadata-schema.md`
-- **Benchmarking Standards:** `documentation/08_benchmarks/kaggle-benchmark-environment.md`
+- **Architecture Blueprints & Rules:** `documentation/03_architecture/v1.0.0-2026-10-15-architecture-overview.md`
+- **Ratified ADRs:** `documentation/03_architecture/v1.0.0-2026-10-15-adr-*.md`
+- **Functional Requirements:** `documentation/02_requirements/v0.1.0-2026-10-15-functional-requirements.md`
+- **API Contracts:** `documentation/04_api/v0.1.0-2026-10-15-api-overview.md` & `v1.0.0-2026-10-15-api-design-guidelines.md`
+- **Metadata Schema:** `documentation/00_governance/v1.0.0-2026-10-15-metadata-schema.md`
+- **Benchmarking Standards:** `documentation/08_benchmarks/v1.0.0-2026-10-15-kaggle-benchmark-environment.md`
 
 `documentation/` is the official team source of truth. Never assume undocumented business rules or fabricate confirmed decisions.
 

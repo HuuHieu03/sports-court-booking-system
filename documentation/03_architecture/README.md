@@ -18,8 +18,8 @@ tags:
 summary: Central directory for architectural blueprints, layer boundaries, C4/Mermaid diagrams, and Architecture Decision Records (ADRs).
 related_docs:
   - documentation/README.md
-  - documentation/03_architecture/architecture-overview.md
-  - documentation/03_architecture/adr-0001-modular-monolith-layered-architecture.md
+  - documentation/03_architecture/v1.0.0-2026-10-15-architecture-overview.md
+  - documentation/03_architecture/v1.0.0-2026-10-15-adr-0001-modular-monolith-layered-architecture.md
 is_template: false
 ---
 
@@ -29,8 +29,8 @@ is_template: false
 Define the high-level structural decisions, module boundaries, layer dependency rules, and formal Architecture Decision Records (ADRs) guiding the codebase.
 
 ## 2. Directory Contents
-- [`architecture-overview.md`](architecture-overview.md): Comprehensive system design, module map, and layered architecture breakdown with Mermaid diagrams.
-- [`adr-0001-modular-monolith-layered-architecture.md`](adr-0001-modular-monolith-layered-architecture.md): Ratified ADR adopting the Modular Monolith and Layered Architecture pattern.
+- [`v1.0.0-2026-10-15-architecture-overview.md`](v1.0.0-2026-10-15-architecture-overview.md): Comprehensive system design, module map, and layered architecture breakdown with Mermaid diagrams.
+- [`v1.0.0-2026-10-15-adr-0001-modular-monolith-layered-architecture.md`](v1.0.0-2026-10-15-adr-0001-modular-monolith-layered-architecture.md): Ratified ADR adopting the Modular Monolith and Layered Architecture pattern.
 - [`TEMPLATE.md`](TEMPLATE.md): Tailored ADR template for new architecture decisions.
 
 ## 3. Mandatory Architectural Invariants

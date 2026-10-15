@@ -32,7 +32,7 @@ The **Sports Court Booking System** addresses operational challenges faced by sp
 
 ## 3. Chosen Architecture
 
-We adopt a **Modular Monolith with Layered Architecture** ([ADR-0001](documentation/03_architecture/adr-0001-modular-monolith-layered-architecture.md)).
+We adopt a **Modular Monolith with Layered Architecture** ([ADR-0001](documentation/03_architecture/v1.0.0-2026-10-15-adr-0001-modular-monolith-layered-architecture.md)).
 
 ```mermaid
 graph TD
@@ -67,6 +67,7 @@ graph TD
 │   ├── 08_benchmarks/    # Kaggle CPU benchmark environment and reports
 │   ├── 09_reports/       # Course milestone submissions
 │   └── 99_archive/       # Superseded documentation
+├── frontend/             # React + TypeScript frontend client shell (scaffold)
 ├── my_workspace/         # Personal developer workspace (STRICTLY IGNORED by Git)
 ├── scaffolds/            # Tracked templates used to bootstrap my_workspace/
 ├── scripts/              # Workspace initialization and documentation validation scripts

@@ -17,7 +17,7 @@ tags:
   - performance
 summary: Central directory for benchmark scripts, workload generators, and performance test harnesses.
 related_docs:
-  - documentation/08_benchmarks/kaggle-benchmark-environment.md
+  - documentation/08_benchmarks/v1.0.0-2026-10-15-kaggle-benchmark-environment.md
   - documentation/08_benchmarks/README.md
 is_template: false
 ---
