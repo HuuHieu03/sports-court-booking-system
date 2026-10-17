@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: Football Booking MVP API
   version: 0.2.0
-  description: Ứng dụng giúp người dùng tìm và đặt sân bóng đá, đồng thời hỗ trợ chủ sân và quản lý vận hành cụm sân,
-    theo dõi lịch đặt.
+  description: Ứng dụng giúp người dùng tìm và đặt sân bóng đá, đồng thời hỗ trợ chủ sân và quản lý vận hành cụm
+    sân, theo dõi lịch đặt.
 servers:
   - url: http://localhost:3000/api/v1
     description: Backend local dự kiến, chưa triển khai
@@ -13,14 +13,14 @@ tags:
   - name: Công khai
     description: Tra cứu Venue, Court, sân trống và feedback. Không cần đăng nhập.
   - name: User
-    description: Đặt sân, xem/hủy booking của mình, gửi feedback và ứng tuyển. User được bổ nhiệm Manager vẫn giữ
-      các quyền này.
+    description: 'Mọi tài khoản đang hoạt động đều có quyền User, bao gồm Owner và Manager: đặt/hủy booking cá nhân,
+      gửi feedback và ứng tuyển.'
   - name: Owner
     description: Tạo Venue, quản lý các Venue thuộc sở hữu và tuyển/bổ nhiệm/thu hồi Manager. Manager không được
       gọi các API trong nhóm này.
   - name: Owner và Manager
-    description: Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó. Quyền chỉ áp dụng trong Venue
-      tương ứng.
+    description: Owner sở hữu Venue hoặc Manager được bổ nhiệm tại Venue đó. Được quản lý sân, xem hồ sơ khách và
+      hủy booking của khách kèm lý do, thông báo.
   - name: Admin
     description: 'Chỉ Admin: xem, khóa, mở khóa và xóa tài khoản. Quyền Admin không mặc định cấp quyền Owner hoặc
       Manager.'
@@ -97,7 +97,7 @@ paths:
 
         **Phạm vi:** Chỉ tài khoản gắn với token hiện tại.
 
-        Trả tên, email, số điện thoại, vai trò và Venue đang được bổ nhiệm quản lý, nếu có.
+        Trả tên, email, số điện thoại, vai trò và danh sách Venue đang được bổ nhiệm quản lý.
       operationId: getMe
       responses:
         '200':
@@ -212,7 +212,7 @@ paths:
 
         **Phạm vi:** Venue thuộc sở hữu người gọi và các Court trong Venue đó.
 
-        **Đề xuất xử lý xóa:** xóa logic Venue và các Court, đóng tuyển và thu hồi bổ nhiệm Manager (hồ sơ APPOINTED chuyển thành REVOKED). Giữ lịch sử booking; Venue/Court đã xóa không còn xuất hiện trong tra cứu hoặc nhận booking mới. Chặn xóa nếu bất kỳ Court nào còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Các thay đổi phải hoàn tất cùng nhau.
+        **Xử lý xóa:** xóa logic Venue và các Court, đóng tuyển và thu hồi bổ nhiệm Manager (hồ sơ APPOINTED chuyển thành REVOKED). Giữ lịch sử booking; Venue/Court đã xóa không còn xuất hiện trong tra cứu hoặc nhận booking mới. Chặn xóa nếu bất kỳ Court nào còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Các thay đổi phải hoàn tất cùng nhau.
       operationId: deleteVenue
       responses:
         '204':
@@ -401,7 +401,7 @@ paths:
 
         **Phạm vi:** Court thuộc Venue người gọi được quản lý.
 
-        **Đề xuất xử lý xóa:** xóa logic Court và giữ lịch sử booking. Court đã xóa không còn xuất hiện trong tra cứu và không nhận booking mới. Chặn xóa nếu sân còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Không tự hủy booking của khách.
+        **Xử lý xóa:** xóa logic Court và giữ lịch sử booking. Court đã xóa không còn xuất hiện trong tra cứu và không nhận booking mới. Chặn xóa nếu sân còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Không tự hủy booking của khách.
       operationId: deleteCourt
       responses:
         '204':
@@ -509,7 +509,7 @@ paths:
         - User
       summary: Gửi feedback cho Venue
       description: |-
-        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+        **Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.
 
         **Phạm vi:** Feedback cho Venue trên đường dẫn.
 
@@ -542,7 +542,7 @@ paths:
         - User
       summary: Đặt sân và xác nhận tự động
       description: |-
-        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+        **Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.
 
         **Phạm vi:** Booking mới của chính người gọi; Court phải còn hoạt động.
 
@@ -584,7 +584,7 @@ paths:
         - User
       summary: Xem booking của chính mình
       description: |-
-        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+        **Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.
 
         **Phạm vi:** Chỉ booking do người gọi đặt.
 
@@ -630,11 +630,11 @@ paths:
         - User
       summary: Hủy booking của chính mình
       description: |-
-        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+        **Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.
 
         **Phạm vi:** Chỉ booking do người gọi đặt.
 
-        Hủy khi còn ít nhất 30 phút trước giờ bắt đầu, bao gồm đúng mốc 30 phút theo giờ server. Thành công chuyển thành CANCELLED và giải phóng khung giờ. Nếu đã hủy, trả lại booking hiện tại. Quyền hủy booking của khách bởi Owner/Manager chưa được xác định trong MVP.
+        Hủy khi còn ít nhất 30 phút trước giờ bắt đầu, bao gồm đúng mốc 30 phút theo giờ server. Thành công chuyển thành CANCELLED và giải phóng khung giờ. Nếu đã hủy, trả lại booking hiện tại. Owner/Manager hủy booking của khách qua API hủy trong Venue quản lý, bắt buộc có lý do và thông báo.
       operationId: postBookingsBookingidCancel
       responses:
         '200':
@@ -673,7 +673,7 @@ paths:
         - User
       summary: Ứng tuyển Manager sau khi đồng ý chia sẻ liên hệ
       description: |-
-        **Ai được gọi:** User đã đăng nhập và chưa quản lý Venue nào.
+        **Ai được gọi:** User đã đăng nhập; việc đang quản lý Venue khác không ngăn ứng tuyển.
 
         **Phạm vi:** Hồ sơ ứng tuyển của chính người gọi vào Venue đang tuyển Manager.
 
@@ -750,7 +750,7 @@ paths:
         - User
       summary: Xem chi tiết booking của mình
       description: |-
-        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+        **Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.
 
         **Phạm vi:** Chỉ booking do người gọi đặt.
 
@@ -855,7 +855,7 @@ paths:
 
         **Phạm vi:** Một hồ sơ ứng tuyển thuộc Venue trên đường dẫn.
 
-        Gửi applicationId của hồ sơ SUBMITTED đã đồng ý chia sẻ liên hệ. Ứng viên phải đang hoạt động, có vai trò nền USER và chưa quản lý Venue khác. Thành công cấp quyền quản lý Venue và toàn bộ Court, chuyển hồ sơ thành APPOINTED.
+        Gửi applicationId của hồ sơ SUBMITTED đã đồng ý chia sẻ liên hệ. Ứng viên phải đang hoạt động. Mỗi Venue chỉ có tối đa một Manager; ứng viên có thể đang quản lý Venue khác. Khi hai hồ sơ được duyệt đồng thời, chỉ một bổ nhiệm tại Venue được tạo. Thành công cấp quyền quản lý Venue và toàn bộ Court, chuyển hồ sơ thành APPOINTED.
       operationId: postVenuesVenueidManagers
       responses:
         '201':
@@ -869,7 +869,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Hồ sơ đã được bổ nhiệm hoặc ứng viên đã quản lý một Venue.
+          description: Hồ sơ đã được bổ nhiệm hoặc Venue đã có Manager.
           content:
             application/json:
               schema:
@@ -907,6 +907,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OwnerManagerView'
+                maxItems: 1
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
@@ -1045,6 +1046,56 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /venues/{venueId}/bookings/{bookingId}/cancel:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID Venue người gọi được quản lý.
+        schema:
+          type: string
+          format: uuid
+      - name: bookingId
+        in: path
+        required: true
+        description: ID booking thuộc Venue này.
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - Owner và Manager
+      summary: Hủy booking của khách và gửi lý do
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Booking thuộc Venue trên đường dẫn mà người gọi được quản lý.
+
+        Bắt buộc nhập reason. Hệ thống chuyển booking sang CANCELLED, lưu lý do, giải phóng khung giờ và gửi thông báo kèm lý do cho người đặt. Yêu cầu thông báo phải được ghi nhận cùng việc hủy để không bỏ sót. Gọi lại booking đã hủy trả kết quả hiện tại, không ghi đè lý do hay gửi thông báo trùng. Thời hạn hủy của Owner/Manager và kênh gửi thông báo cần chốt.
+      operationId: cancelVenueCustomerBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelCustomerBookingRequest'
+      responses:
+        '200':
+          description: Booking đã hủy, kèm lý do và profile người đặt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingWithCustomerProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /venues/{venueId}/bookings/{bookingId}/customer-profile:
     parameters:
       - name: venueId
@@ -1173,7 +1224,7 @@ paths:
 
         **Phạm vi:** Tài khoản có accountId trên đường dẫn, khác tài khoản Admin đang gọi.
 
-        **Đề xuất xử lý xóa:** chuyển tài khoản sang DELETED và chặn đăng nhập/request cần xác thực; giữ tham chiếu lịch sử booking. Gọi lại tài khoản đã xóa trả 204. Không tự hủy booking. Cần chốt cách xử lý Venue thuộc sở hữu và quyền Manager trước khi triển khai.
+        **Xử lý xóa:** chuyển tài khoản sang DELETED và chặn đăng nhập/request cần xác thực; giữ tham chiếu lịch sử booking. Gọi lại tài khoản đã xóa trả 204. Không tự hủy booking. Cần chốt cách xử lý Venue thuộc sở hữu và quyền Manager trước khi triển khai.
       operationId: deleteAdminAccountsAccountid
       responses:
         '204':
@@ -1318,8 +1369,8 @@ components:
           writeOnly: true
     AccountProfile:
       type: object
-      description: Thông tin tài khoản dành cho chính người dùng, Admin hoặc Owner xem Manager đã bổ nhiệm.
-        Owner và Manager xem profile khách đặt sân qua CustomerProfile trong các API booking của Venue.
+      description: Thông tin tài khoản dành cho chính người dùng, Admin hoặc Owner xem Manager đã bổ nhiệm. Owner
+        và Manager xem profile khách đặt sân qua CustomerProfile trong các API booking của Venue.
       required:
         - id
         - fullName
@@ -1327,7 +1378,7 @@ components:
         - phone
         - role
         - status
-        - managedVenueId
+        - managedVenueIds
         - createdAt
       properties:
         id:
@@ -1350,22 +1401,25 @@ components:
             - USER
             - OWNER
             - ADMIN
-          description: Vai trò nền của tài khoản. Manager là quyền quản lý một Venue trên tài khoản USER.
+          description: Vai trò tài khoản. Mọi tài khoản có quyền User; quyền Manager được gắn riêng theo từng Venue.
         status:
           type: string
           enum:
             - ACTIVE
             - LOCKED
             - DELETED
-        managedVenueId:
-          type: string
-          format: uuid
-          nullable: true
-          description: Venue đang được bổ nhiệm quản lý; null nếu không có. Owner quản lý Venue bằng quyền sở hữu.
         createdAt:
           type: string
           format: date-time
           example: '2026-10-20T18:00:00+07:00'
+        managedVenueIds:
+          type: array
+          uniqueItems: true
+          description: Các Venue đang được bổ nhiệm quản lý. Một Manager có thể quản lý nhiều Venue; không có bổ
+            nhiệm thì trả mảng rỗng.
+          items:
+            type: string
+            format: uuid
     AuthResult:
       type: object
       required:
@@ -1572,6 +1626,7 @@ components:
         - status
         - createdAt
         - cancelledAt
+        - cancellationReason
       properties:
         id:
           type: string
@@ -1611,6 +1666,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        cancellationReason:
+          type: string
+          nullable: true
+          description: Lý do khi Owner/Manager hủy booking của khách; null nếu chưa hủy hoặc User tự hủy.
+          example: Sân cần sửa hệ thống chiếu sáng.
     CustomerProfile:
       type: object
       description: Profile người đã đặt sân, chỉ trả cho Owner sở hữu Venue hoặc Manager đang quản lý Venue chứa
@@ -1634,7 +1694,7 @@ components:
           example: minhanh@example.com
         phone:
           type: string
-          example: '0901234567'
+          example: 0901234567
     BookingWithCustomerProfile:
       description: Booking kèm profile người đặt, dành riêng cho các API quản lý booking trong Venue.
       allOf:
@@ -1840,6 +1900,18 @@ components:
             - ACTIVE
             - LOCKED
           description: ACTIVE để mở khóa, LOCKED để khóa. Không dùng để khôi phục tài khoản đã xóa.
+    CancelCustomerBookingRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Lý do hủy gửi cho người đặt; không chấp nhận chuỗi chỉ có khoảng trắng.
+          example: Sân cần sửa hệ thống chiếu sáng.
   responses:
     BadRequest:
       description: Dữ liệu không hợp lệ hoặc điều kiện nghiệp vụ chưa thỏa.

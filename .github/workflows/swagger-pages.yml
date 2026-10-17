@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - documentation/openapi.yaml
-      - documentation/swagger.html
+      - documentation/api/openapi.yaml
+      - documentation/api/swagger.html
       - .github/workflows/swagger-pages.yml
   workflow_dispatch:
 
@@ -36,9 +36,9 @@ jobs:
       - name: Prepare Swagger site
         run: |
           mkdir _site
-          cp documentation/swagger.html _site/index.html
-          cp documentation/swagger.html _site/swagger.html
-          cp documentation/openapi.yaml _site/openapi.yaml
+          cp documentation/api/swagger.html _site/index.html
+          cp documentation/api/swagger.html _site/swagger.html
+          cp documentation/api/openapi.yaml _site/openapi.yaml
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
