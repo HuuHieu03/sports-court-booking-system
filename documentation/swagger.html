@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Football Booking MVP — Swagger</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+    <style>
+      body { margin: 0; background: #fafafa; }
+      .notice { max-width: 1400px; margin: 0 auto; padding: 20px; font: 16px/1.6 system-ui, sans-serif; }
+      .notice p { margin: 0 0 8px; }
+      code { overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body>
+    <div class="notice">
+      <p><strong>API MVP · Bản dự thảo</strong> — mô tả thiết kế, chưa có backend để thử request.</p>
+      <p>Nguồn: <a href="./openapi.yaml">openapi.yaml</a>. Cần Internet để tải Swagger UI.</p>
+      <p id="file-help" hidden>
+        Tại thư mục gốc dự án, chạy
+        <code>python -m http.server 8080 --bind 127.0.0.1 --directory documentation</code>,
+        rồi mở <a href="http://127.0.0.1:8080/swagger.html">http://127.0.0.1:8080/swagger.html</a>.
+      </p>
+      <noscript>Bật JavaScript để xem Swagger UI hoặc mở trực tiếp file openapi.yaml.</noscript>
+    </div>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+    <script>
+      if (location.protocol === 'file:') {
+        document.getElementById('file-help').hidden = false;
+      } else if (typeof SwaggerUIBundle === 'function') {
+        SwaggerUIBundle({
+          url: './openapi.yaml',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          displayRequestDuration: true,
+          docExpansion: 'list',
+          filter: true,
+          validatorUrl: null,
+          supportedSubmitMethods: []
+        });
+      } else {
+        document.getElementById('swagger-ui').textContent =
+          'Chưa tải được Swagger UI. Kiểm tra kết nối Internet hoặc mở file openapi.yaml.';
+      }
+    </script>
+  </body>
+</html>
