@@ -1045,6 +1045,46 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /venues/{venueId}/bookings/{bookingId}/customer-profile:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID Venue người gọi sở hữu hoặc đang được bổ nhiệm quản lý.
+        schema:
+          type: string
+          format: uuid
+      - name: bookingId
+        in: path
+        required: true
+        description: ID booking thuộc Venue này.
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Owner và Manager
+      summary: Xem hồ sơ người đặt sân
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Người đặt booking thuộc Venue trên đường dẫn mà người gọi được quản lý.
+
+        Trả hồ sơ người đặt gồm ID, tên, email và số điện thoại. Người dùng được xác định từ booking, không nhận userId tùy ý. Booking không tồn tại, không thuộc Venue hoặc ngoài phạm vi quản lý trả 404.
+      operationId: getBookingCustomerProfile
+      responses:
+        '200':
+          description: Hồ sơ người đặt booking.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/accounts:
     get:
       tags:
