@@ -14,8 +14,7 @@
   </head>
   <body>
     <div class="notice">
-      <p><strong>API MVP · Bản dự thảo</strong> — mô tả thiết kế, chưa có backend để thử request.</p>
-      <p>Nguồn: <a href="./openapi.yaml">openapi.yaml</a>. Cần Internet để tải Swagger UI.</p>
+      <p><a href="./openapi.yaml">Tải đặc tả OpenAPI</a></p>
       <p id="file-help" hidden>
         Tại thư mục gốc dự án, chạy
         <code>python -m http.server 8080 --bind 127.0.0.1 --directory documentation</code>,
@@ -34,7 +33,8 @@
           dom_id: '#swagger-ui',
           deepLinking: true,
           displayRequestDuration: true,
-          docExpansion: 'list',
+          docExpansion: 'none',
+          defaultModelsExpandDepth: 0,
           filter: true,
           validatorUrl: null,
           supportedSubmitMethods: []

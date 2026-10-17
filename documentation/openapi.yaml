@@ -1,62 +1,44 @@
 openapi: 3.0.3
 info:
   title: Football Booking MVP API
-  version: 0.1.0
-  description: |-
-    Bản dự thảo API cho prototype đặt và quản lý sân bóng đá. Các endpoint dưới đây là thiết kế đề xuất, chưa phải API đã triển khai.
-
-    Venue là địa điểm/cụm sân. Court là từng sân thuộc một Venue. Owner sở hữu nhiều Venue; Manager chỉ quản lý một Venue và toàn bộ Court thuộc Venue đó. Admin quản trị tài khoản.
-
-    Quy tắc đã thống nhất:
-    - Booking được xác nhận tự động khi khung giờ còn trống. Không có bước duyệt booking.
-    - User được hủy trước giờ bắt đầu 30 phút.
-    - Chỉ Owner của Venue được xem thông tin liên hệ ứng viên đã đồng ý chia sẻ và profile Manager đã bổ nhiệm tại Venue đó.
-    - User không được xem profile của người dùng khác. Các API công khai không trả email hoặc số điện thoại cá nhân.
-    - Owner và Manager chỉ truy cập dữ liệu quản lý trong phạm vi Venue của mình. ID gửi từ client không thay thế việc kiểm tra quyền trên server.
-
-    Các lựa chọn trong bản dự thảo cần rà soát trước khi triển khai:
-    - Dùng Bearer JWT, ID dạng UUID, tiền tố /api/v1 và thời gian RFC 3339 có múi giờ. Đây là đề xuất kỹ thuật.
-    - Role nền là USER, OWNER hoặc ADMIN. Manager là quyền gắn với một Venue trên tài khoản USER; tài khoản đó vẫn dùng được chức năng khách hàng. Cần chốt việc Owner có được đặt sân như User hay không.
-    - Khung giờ được gửi bằng startsAt/endsAt, theo khoảng [startsAt, endsAt): hai booking có thể liền nhau. Cần chốt giờ mở cửa, độ dài và cách chia khung giờ trước khi viết chức năng chọn giờ.
-    - Mốc hủy được hiểu là còn ít nhất 30 phút, bao gồm đúng 30 phút, tính theo giờ server. Cần xác nhận cách hiểu này.
-    - Feedback tạm dùng nội dung văn bản cho Venue. Cần chốt điều kiện được gửi feedback; bản dự thảo chưa yêu cầu đã hoàn tất booking.
-    - Xóa tài khoản được đề xuất là xóa logic để giữ lịch sử booking; chi tiết xử lý dữ liệu và Venue/Manager liên quan cần chốt. Khóa/xóa tài khoản không tự hủy booking trong bản dự thảo.
-
-    Những điểm còn mở:
-    - Số Manager tối đa của một Venue; thay thế hoặc thu hồi bổ nhiệm.
-    - Các thao tác quản lý booking ngoài việc xem của Owner/Manager. Endpoint hủy hiện chỉ mô tả việc User hủy booking của chính mình.
-    - Giới hạn thời gian, số lượng booking và cách xử lý lịch sân khi cập nhật Venue/Court.
-
-    Xem Swagger trực tuyến tại https://huuhieu03.github.io/sports-court-booking-system/. Khi chỉnh sửa trong VS Code, có thể dùng preview OpenAPI. Swagger UI cần Internet để tải thư viện. Địa chỉ backend bên dưới là địa chỉ dự kiến; chưa có backend để thử request.
+  version: 0.2.0
+  description: Tài liệu API cho prototype đặt và quản lý sân bóng đá. Venue là cụm sân; Court là từng sân trong
+    Venue. API hỗ trợ tìm và đặt sân, quản lý Venue/Court, tuyển Manager và quản trị tài khoản. Đây là bản thiết
+    kế đang rà soát; backend chưa được triển khai.
 servers:
   - url: http://localhost:3000/api/v1
     description: Backend local dự kiến, chưa triển khai
 tags:
-  - name: Auth
+  - name: Tài khoản
     description: Đăng ký, đăng nhập và xem tài khoản của chính mình.
-  - name: Venues
-    description: Tìm địa điểm và quản lý Venue theo quyền sở hữu.
-  - name: Courts
-    description: Xem, quản lý sân và kiểm tra một khung giờ.
-  - name: Bookings
-    description: Đặt sân, xem booking và hủy theo quy định.
-  - name: Managers
-    description: Tuyển, ứng tuyển và bổ nhiệm Manager.
-  - name: Feedback
-    description: Xem và gửi góp ý cho Venue.
+  - name: Công khai
+    description: Tra cứu Venue, Court, sân trống và feedback. Không cần đăng nhập.
+  - name: User
+    description: Đặt sân, xem/hủy booking của mình, gửi feedback và ứng tuyển. User được bổ nhiệm Manager vẫn giữ
+      các quyền này.
+  - name: Owner
+    description: Tạo Venue, quản lý các Venue thuộc sở hữu và tuyển/bổ nhiệm/thu hồi Manager. Manager không được
+      gọi các API trong nhóm này.
+  - name: Owner và Manager
+    description: Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó. Quyền chỉ áp dụng trong Venue
+      tương ứng.
   - name: Admin
-    description: Xem, khóa, mở khóa và xóa tài khoản. Chỉ Admin.
+    description: 'Chỉ Admin: xem, khóa, mở khóa và xóa tài khoản. Quyền Admin không mặc định cấp quyền Owner hoặc
+      Manager.'
 security:
   - bearerAuth: []
 paths:
   /auth/register:
     post:
       tags:
-        - Auth
+        - Tài khoản
       summary: Đăng ký tài khoản
-      description: 'Công khai. Chọn USER hoặc OWNER. Lưu email và số điện thoại để dùng trong luồng ứng tuyển có
-        sự đồng ý. Không trả password hoặc password hash. Đề xuất: đăng ký thành công trả token để vào ứng dụng
-        ngay.'
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Tài khoản mới của người đăng ký.
+
+        Chọn USER hoặc OWNER khi đăng ký. Cung cấp tên, email, số điện thoại và mật khẩu. Thành công trả thông tin tài khoản và access token; email đã được dùng trả 409.
       operationId: postAuthRegister
       responses:
         '201':
@@ -79,10 +61,14 @@ paths:
   /auth/login:
     post:
       tags:
-        - Auth
+        - Tài khoản
       summary: Đăng nhập
-      description: Công khai. Email/password không đúng trả 401 với thông báo chung. Tài khoản bị khóa hoặc đã xóa
-        không được cấp token. Không trả lý do cụ thể cho người chưa xác thực.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Tài khoản khớp email và mật khẩu.
+
+        Thành công trả access token. Thông tin sai, tài khoản bị khóa hoặc đã xóa trả 401 với thông báo chung.
       operationId: postAuthLogin
       responses:
         '200':
@@ -105,10 +91,14 @@ paths:
   /me:
     get:
       tags:
-        - Auth
+        - Tài khoản
       summary: Xem tài khoản của chính mình
-      description: Mọi tài khoản đang hoạt động. Server xác định tài khoản từ token; không nhận userId để xem người
-        khác.
+      description: |-
+        **Ai được gọi:** User, Owner, Manager hoặc Admin đã đăng nhập.
+
+        **Phạm vi:** Chỉ tài khoản gắn với token hiện tại.
+
+        Trả tên, email, số điện thoại, vai trò và Venue đang được bổ nhiệm quản lý, nếu có.
       operationId: getMe
       responses:
         '200':
@@ -124,9 +114,14 @@ paths:
   /venues:
     get:
       tags:
-        - Venues
+        - Công khai
       summary: Tìm và xem các Venue
-      description: Công khai. q tìm theo tên hoặc địa chỉ. Chỉ trả thông tin Venue và thông báo tuyển Manager.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Tất cả Venue chưa bị xóa.
+
+        Tìm theo tên hoặc địa chỉ bằng q; bỏ q để xem danh sách Venue.
       operationId: getVenues
       responses:
         '200':
@@ -150,10 +145,14 @@ paths:
             maxLength: 200
     post:
       tags:
-        - Venues
+        - Owner
       summary: Tạo Venue
-      description: Chỉ OWNER. Owner được lấy từ token; client không được chỉ định chủ sở hữu khác. Thông báo tuyển
-        Manager mặc định đóng.
+      description: |-
+        **Ai được gọi:** Chỉ Owner đã đăng nhập.
+
+        **Phạm vi:** Venue mới thuộc sở hữu người gọi.
+
+        Tạo Venue với tên, địa chỉ và mô tả. Owner được lấy từ token. Thông báo tuyển Manager mặc định đóng.
       operationId: postVenues
       responses:
         '201':
@@ -174,26 +173,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateVenueRequest'
-  /me/venues:
-    get:
-      tags:
-        - Venues
-      summary: Xem các Venue thuộc sở hữu
-      description: Chỉ OWNER. Chỉ trả các Venue do tài khoản hiện tại sở hữu.
-      operationId: getMeVenues
-      responses:
-        '200':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Venue'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
   /venues/{venueId}:
     parameters:
       - name: venueId
@@ -206,9 +185,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     get:
       tags:
-        - Venues
+        - Công khai
       summary: Xem chi tiết Venue
-      description: Công khai. Không trả profile Owner, ứng viên hoặc Manager.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Venue có ID trên đường dẫn, chưa bị xóa.
+
+        Trả thông tin Venue và thông báo tuyển Manager. Không trả profile hoặc liên hệ cá nhân của Owner/Manager.
       operationId: getVenuesVenueid
       responses:
         '200':
@@ -220,12 +204,45 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security: []
+    delete:
+      tags:
+        - Owner
+      summary: Xóa Venue
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Venue thuộc sở hữu người gọi và các Court trong Venue đó.
+
+        **Đề xuất xử lý xóa:** xóa logic Venue và các Court, đóng tuyển và thu hồi bổ nhiệm Manager (hồ sơ APPOINTED chuyển thành REVOKED). Giữ lịch sử booking; Venue/Court đã xóa không còn xuất hiện trong tra cứu hoặc nhận booking mới. Chặn xóa nếu bất kỳ Court nào còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Các thay đổi phải hoàn tất cùng nhau.
+      operationId: deleteVenue
+      responses:
+        '204':
+          description: Thành công, không có response body.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Venue còn booking đang diễn ra hoặc sắp tới.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: VENUE_HAS_ACTIVE_BOOKINGS
+                message: Chưa thể xóa Venue vì còn booking chưa kết thúc.
     patch:
       tags:
-        - Venues
+        - Owner và Manager
       summary: Cập nhật Venue
-      description: Owner sở hữu Venue hoặc Manager được bổ nhiệm tại Venue này. Chỉ cập nhật tên, địa chỉ và mô
-        tả; không đổi quyền sở hữu.
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Venue người gọi sở hữu hoặc đang được bổ nhiệm quản lý.
+
+        Cập nhật tên, địa chỉ hoặc mô tả. Không chuyển quyền sở hữu hoặc thay đổi quyền Manager.
       operationId: patchVenuesVenueid
       responses:
         '200':
@@ -260,9 +277,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     get:
       tags:
-        - Courts
+        - Công khai
       summary: Xem các Court của Venue
-      description: Công khai. Venue không tồn tại trả 404; Venue chưa có sân trả danh sách rỗng.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Các Court chưa bị xóa thuộc Venue trên đường dẫn.
+
+        Trả danh sách sân của Venue; danh sách rỗng nếu chưa có sân.
       operationId: getVenuesVenueidCourts
       responses:
         '200':
@@ -278,9 +300,14 @@ paths:
       security: []
     post:
       tags:
-        - Courts
+        - Owner và Manager
       summary: Thêm Court vào Venue
-      description: Owner sở hữu Venue hoặc Manager của Venue. Court luôn thuộc Venue trên đường dẫn.
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Court mới trong Venue người gọi được quản lý.
+
+        Tạo sân với tên và mô tả. venueId được lấy từ đường dẫn.
       operationId: postVenuesVenueidCourts
       responses:
         '201':
@@ -315,9 +342,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     get:
       tags:
-        - Courts
+        - Công khai
       summary: Xem chi tiết Court
-      description: Công khai. Trả thông tin sân và venueId để truy cập địa điểm tương ứng.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Court có ID trên đường dẫn, chưa bị xóa.
+
+        Trả thông tin sân và venueId.
       operationId: getCourtsCourtid
       responses:
         '200':
@@ -331,10 +363,14 @@ paths:
       security: []
     patch:
       tags:
-        - Courts
+        - Owner và Manager
       summary: Cập nhật Court
-      description: Owner hoặc Manager của Venue chứa Court. Chỉ cập nhật tên và mô tả, không chuyển sân sang Venue
-        khác.
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Court thuộc Venue người gọi được quản lý.
+
+        Cập nhật tên hoặc mô tả sân. Không chuyển Court sang Venue khác.
       operationId: patchCourtsCourtid
       responses:
         '200':
@@ -357,6 +393,35 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateCourtRequest'
+    delete:
+      tags:
+        - Owner và Manager
+      summary: Xóa Court
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Court thuộc Venue người gọi được quản lý.
+
+        **Đề xuất xử lý xóa:** xóa logic Court và giữ lịch sử booking. Court đã xóa không còn xuất hiện trong tra cứu và không nhận booking mới. Chặn xóa nếu sân còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Không tự hủy booking của khách.
+      operationId: deleteCourt
+      responses:
+        '204':
+          description: Thành công, không có response body.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Court còn booking đang diễn ra hoặc sắp tới.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: COURT_HAS_ACTIVE_BOOKINGS
+                message: Chưa thể xóa Court vì còn booking chưa kết thúc.
   /courts/{courtId}/availability:
     parameters:
       - name: courtId
@@ -369,12 +434,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     get:
       tags:
-        - Courts
+        - Công khai
       summary: Kiểm tra sân trống trong khung giờ
-      description: Công khai. startsAt phải ở tương lai, endsAt phải sau startsAt; thời gian phải có múi giờ. Theo
-        đề xuất [startsAt, endsAt), sân trống khi không có booking CONFIRMED giao với khoảng này. Booking CANCELLED
-        không giữ chỗ. Kết quả không giữ sân; POST /bookings phải kiểm tra lại để tránh hai người đặt trùng. Không
-        tiết lộ thông tin người đặt khác.
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Một Court và khung giờ startsAt–endsAt.
+
+        startsAt phải ở tương lai, endsAt sau startsAt và cả hai có múi giờ. Trả available=true khi không trùng booking CONFIRMED. Hai booking được phép liền giờ; booking CANCELLED không giữ sân. Kết quả kiểm tra không giữ chỗ và không tiết lộ người đặt khác.
       operationId: getCourtsCourtidAvailability
       responses:
         '200':
@@ -405,15 +472,82 @@ paths:
             type: string
             format: date-time
             example: '2026-10-20T19:00:00+07:00'
+  /venues/{venueId}/feedback:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID của tài nguyên.
+        schema:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+    get:
+      tags:
+        - Công khai
+      summary: Xem feedback của Venue
+      description: |-
+        **Ai được gọi:** Bất kỳ ai; không cần đăng nhập.
+
+        **Phạm vi:** Feedback của Venue trên đường dẫn.
+
+        Trả nội dung feedback, không kèm profile hoặc thông tin liên hệ người gửi.
+      operationId: getVenuesVenueidFeedback
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Feedback'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security: []
+    post:
+      tags:
+        - User
+      summary: Gửi feedback cho Venue
+      description: |-
+        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+
+        **Phạm vi:** Feedback cho Venue trên đường dẫn.
+
+        Gửi nội dung văn bản. Tác giả được lấy từ token. Điều kiện bắt buộc đã đặt sân trước khi feedback vẫn cần chốt.
+      operationId: postVenuesVenueidFeedback
+      responses:
+        '201':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeedbackRequest'
   /bookings:
     post:
       tags:
-        - Bookings
+        - User
       summary: Đặt sân và xác nhận tự động
-      description: 'USER, bao gồm USER đang là Manager theo đề xuất phân quyền. Server lấy người đặt từ token, suy
-        ra Venue từ Court và kiểm tra thời gian như API availability. Kiểm tra sân trống và tạo booking phải là
-        một thao tác nguyên tử: nếu hai request trùng khung giờ, chỉ một booking được xác nhận; request còn lại
-        trả 409 BOOKING_CONFLICT. Không có trạng thái chờ Manager duyệt.'
+      description: |-
+        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+
+        **Phạm vi:** Booking mới của chính người gọi; Court phải còn hoạt động.
+
+        Gửi courtId, startsAt và endsAt. Nếu khung giờ hợp lệ và sân còn trống, tạo booking CONFIRMED ngay. Kiểm tra và đặt sân phải bảo đảm hai request không thể tạo booking trùng nhau.
       operationId: postBookings
       responses:
         '201':
@@ -427,7 +561,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Sân đã được đặt trong khung giờ này.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: BOOKING_CONFLICT
+                message: Sân đã có booking trùng khung giờ.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -441,10 +582,14 @@ paths:
   /me/bookings:
     get:
       tags:
-        - Bookings
+        - User
       summary: Xem booking của chính mình
-      description: USER, bao gồm USER đang là Manager. Chỉ trả booking có người đặt là tài khoản hiện tại. Không
-        dùng endpoint này để xem booking của khách tại Venue quản lý.
+      description: |-
+        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+
+        **Phạm vi:** Chỉ booking do người gọi đặt.
+
+        Xem danh sách booking của mình; có thể lọc trạng thái CONFIRMED hoặc CANCELLED.
       operationId: getMeBookings
       responses:
         '200':
@@ -471,36 +616,6 @@ paths:
             enum:
               - CONFIRMED
               - CANCELLED
-  /bookings/{bookingId}:
-    parameters:
-      - name: bookingId
-        in: path
-        required: true
-        description: ID của tài nguyên.
-        schema:
-          type: string
-          format: uuid
-          example: c703f228-62f7-4ee0-b527-652f8152c026
-    get:
-      tags:
-        - Bookings
-      summary: Xem chi tiết booking được phép truy cập
-      description: Người đặt, Owner sở hữu Venue hoặc Manager của Venue chứa booking. Booking của người khác ngoài
-        phạm vi trả 404. Không kèm profile người đặt.
-      operationId: getBookingsBookingid
-      responses:
-        '200':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Booking'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
   /bookings/{bookingId}/cancel:
     parameters:
       - name: bookingId
@@ -513,12 +628,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     post:
       tags:
-        - Bookings
+        - User
       summary: Hủy booking của chính mình
-      description: 'Chỉ người đặt. Đề xuất: cho phép khi serverNow <= startsAt - 30 phút, gồm đúng mốc 30 phút;
-        sau mốc này trả 409 CANCELLATION_WINDOW_CLOSED. Hủy thành công chuyển thành CANCELLED và giải phóng khung
-        giờ. Gọi lại booking đã CANCELLED trả cùng booking, không tạo tác dụng mới. Quyền hủy của Owner/Manager
-        đối với booking khách chưa được chốt.'
+      description: |-
+        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+
+        **Phạm vi:** Chỉ booking do người gọi đặt.
+
+        Hủy khi còn ít nhất 30 phút trước giờ bắt đầu, bao gồm đúng mốc 30 phút theo giờ server. Thành công chuyển thành CANCELLED và giải phóng khung giờ. Nếu đã hủy, trả lại booking hiện tại. Quyền hủy booking của khách bởi Owner/Manager chưa được xác định trong MVP.
       operationId: postBookingsBookingidCancel
       responses:
         '200':
@@ -530,11 +647,309 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Đã qua thời hạn hủy booking.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: CANCELLATION_WINDOW_CLOSED
+                message: Chỉ được hủy khi còn ít nhất 30 phút trước giờ bắt đầu.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /venues/{venueId}/manager-applications:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID của tài nguyên.
+        schema:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+    post:
+      tags:
+        - User
+      summary: Ứng tuyển Manager sau khi đồng ý chia sẻ liên hệ
+      description: |-
+        **Ai được gọi:** User đã đăng nhập và chưa quản lý Venue nào.
+
+        **Phạm vi:** Hồ sơ ứng tuyển của chính người gọi vào Venue đang tuyển Manager.
+
+        Trước khi gửi, UI thông báo Owner sẽ xem email và số điện thoại đăng ký. Chỉ tạo hồ sơ khi consentToShareContact=true; server lấy liên hệ từ tài khoản và ghi nhận thời điểm đồng ý. Owner nhận quyền xem liên hệ qua API danh sách ứng viên; hai bên tự trao đổi ngoài ứng dụng. Mỗi User chỉ có một hồ sơ SUBMITTED hoặc APPOINTED tại cùng Venue; hồ sơ REVOKED không chặn lần ứng tuyển mới.
+      operationId: postVenuesVenueidManagerApplications
+      responses:
+        '201':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagerApplication'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Venue đã đóng tuyển hoặc User đã có hồ sơ tại Venue này.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: APPLICATION_CONFLICT
+                message: Không thể tạo thêm hồ sơ ứng tuyển tại Venue này.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyManagerRequest'
+    get:
+      tags:
+        - Owner
+      summary: Owner xem hồ sơ và liên hệ ứng viên
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Chỉ ứng viên đã đồng ý chia sẻ liên hệ tại Venue này.
+
+        Trả hồ sơ cùng tên, email và số điện thoại đăng ký để Owner chủ động liên hệ. Manager không được xem danh sách ứng viên.
+      operationId: getVenuesVenueidManagerApplications
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OwnerApplicationView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /me/bookings/{bookingId}:
+    parameters:
+      - name: bookingId
+        in: path
+        required: true
+        description: ID của tài nguyên.
+        schema:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+    get:
+      tags:
+        - User
+      summary: Xem chi tiết booking của mình
+      description: |-
+        **Ai được gọi:** User đã đăng nhập, bao gồm User đang là Manager.
+
+        **Phạm vi:** Chỉ booking do người gọi đặt.
+
+        Trả chi tiết booking. Booking không tồn tại hoặc thuộc người khác trả 404.
+      operationId: getMyBooking
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /me/venues:
+    get:
+      tags:
+        - Owner
+      summary: Xem các Venue thuộc sở hữu
+      description: |-
+        **Ai được gọi:** Chỉ Owner đã đăng nhập.
+
+        **Phạm vi:** Các Venue chưa bị xóa thuộc sở hữu người gọi.
+
+        Trả danh sách Venue của Owner để chọn địa điểm cần quản lý.
+      operationId: getMeVenues
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Venue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /venues/{venueId}/manager-recruitment:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID của tài nguyên.
+        schema:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+    patch:
+      tags:
+        - Owner
+      summary: Đăng hoặc đóng thông báo tuyển Manager
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Thông báo tuyển Manager của Venue trên đường dẫn.
+
+        Đặt isOpen=true để mở tuyển hoặc false để đóng. Cập nhật message để đổi nội dung hiển thị trên trang Venue. Đóng tuyển không xóa hồ sơ đã nhận hoặc quyền Manager hiện tại.
+      operationId: patchVenuesVenueidManagerRecruitment
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recruitment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecruitmentRequest'
+  /venues/{venueId}/managers:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID của tài nguyên.
+        schema:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+    post:
+      tags:
+        - Owner
+      summary: Owner xác nhận bổ nhiệm Manager
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Một hồ sơ ứng tuyển thuộc Venue trên đường dẫn.
+
+        Gửi applicationId của hồ sơ SUBMITTED đã đồng ý chia sẻ liên hệ. Ứng viên phải đang hoạt động, có vai trò nền USER và chưa quản lý Venue khác. Thành công cấp quyền quản lý Venue và toàn bộ Court, chuyển hồ sơ thành APPOINTED.
+      operationId: postVenuesVenueidManagers
+      responses:
+        '201':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagerAppointment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Hồ sơ đã được bổ nhiệm hoặc ứng viên đã quản lý một Venue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: APPOINTMENT_CONFLICT
+                message: Không thể bổ nhiệm Manager từ hồ sơ này.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointManagerRequest'
+    get:
+      tags:
+        - Owner
+      summary: Owner xem profile Manager đã bổ nhiệm
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Các Manager đang được bổ nhiệm tại Venue trên đường dẫn.
+
+        Trả thông tin bổ nhiệm cùng profile Manager, gồm email và số điện thoại. Không phải API xem profile người dùng tùy ý.
+      operationId: getVenuesVenueidManagers
+      responses:
+        '200':
+          description: Thành công.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OwnerManagerView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /venues/{venueId}/managers/{userId}:
+    parameters:
+      - name: venueId
+        in: path
+        required: true
+        description: ID Venue thuộc sở hữu Owner.
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        description: ID tài khoản Manager cần thu hồi quyền.
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags:
+        - Owner
+      summary: Thu hồi quyền Manager
+      description: |-
+        **Ai được gọi:** Chỉ Owner sở hữu Venue.
+
+        **Phạm vi:** Manager có userId trên đường dẫn phải đang được bổ nhiệm tại chính Venue này.
+
+        Gỡ bổ nhiệm và chuyển hồ sơ sang REVOKED. Quyền quản lý Venue/Court/booking hết hiệu lực ngay, kể cả với phiên đăng nhập hiện tại. Tài khoản vẫn là User, giữ booking cá nhân và có thể ứng tuyển lại. Owner không còn xem profile qua danh sách Manager; liên hệ trong hồ sơ ứng tuyển vẫn theo sự đồng ý đã có.
+      operationId: revokeVenueManager
+      responses:
+        '204':
+          description: Thành công, không có response body.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /venues/{venueId}/bookings:
     parameters:
       - name: venueId
@@ -547,10 +962,14 @@ paths:
           example: c703f228-62f7-4ee0-b527-652f8152c026
     get:
       tags:
-        - Bookings
+        - Owner và Manager
       summary: Xem booking trong Venue quản lý
-      description: Chỉ Owner sở hữu Venue hoặc Manager được bổ nhiệm tại Venue. Trả booking của mọi Court trong
-        Venue; không kèm profile hoặc thông tin liên hệ cá nhân người đặt.
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Booking của mọi Court trong Venue người gọi được quản lý.
+
+        Trả danh sách booking; có thể lọc theo courtId và status. Court dùng để lọc phải thuộc Venue này. Không trả profile hoặc liên hệ cá nhân của người đặt.
       operationId: getVenuesVenueidBookings
       responses:
         '200':
@@ -587,238 +1006,57 @@ paths:
             enum:
               - CONFIRMED
               - CANCELLED
-  /venues/{venueId}/manager-recruitment:
+  /venues/{venueId}/bookings/{bookingId}:
     parameters:
       - name: venueId
         in: path
         required: true
-        description: ID của tài nguyên.
+        description: ID Venue quản lý.
         schema:
           type: string
           format: uuid
-          example: c703f228-62f7-4ee0-b527-652f8152c026
-    patch:
-      tags:
-        - Managers
-      summary: Đăng hoặc đóng thông báo tuyển Manager
-      description: 'Chỉ Owner sở hữu Venue. isOpen=true để đăng tuyển, false để đóng. Nội dung xuất hiện trong GET
-        /venues/{venueId}. Đề xuất: đóng tuyển không xóa hồ sơ đã nhận hoặc quyền Manager đã bổ nhiệm.'
-      operationId: patchVenuesVenueidManagerRecruitment
-      responses:
-        '200':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Recruitment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateRecruitmentRequest'
-  /venues/{venueId}/manager-applications:
-    parameters:
-      - name: venueId
+      - name: bookingId
         in: path
         required: true
-        description: ID của tài nguyên.
+        description: ID booking thuộc Venue này.
         schema:
           type: string
           format: uuid
-          example: c703f228-62f7-4ee0-b527-652f8152c026
-    post:
-      tags:
-        - Managers
-      summary: Ứng tuyển Manager sau khi đồng ý chia sẻ liên hệ
-      description: 'Chỉ USER chưa quản lý Venue nào. Venue phải đang tuyển. Trước khi gửi, UI thông báo rõ Owner
-        sẽ được xem email và số điện thoại đã đăng ký; chỉ gửi khi User chủ động đồng ý. Server bắt buộc kiểm tra
-        consentToShareContact=true, lấy thông tin liên hệ từ tài khoản và lưu thời điểm đồng ý. Không nhận email/phone
-        thay thế từ client. Owner xem được liên hệ ngay qua GET cùng đường dẫn; không gửi email hay liên hệ tự động.
-        Đề xuất: mỗi User chỉ có một hồ sơ cho cùng Venue, nộp trùng trả 409.'
-      operationId: postVenuesVenueidManagerApplications
-      responses:
-        '201':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ManagerApplication'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApplyManagerRequest'
     get:
       tags:
-        - Managers
-      summary: Owner xem hồ sơ và liên hệ ứng viên
-      description: Chỉ Owner sở hữu Venue. Chỉ trả hồ sơ đã có sự đồng ý chia sẻ; mỗi hồ sơ gồm tên, email và số
-        điện thoại đăng ký. Manager không được xem danh sách này chỉ vì có quyền quản lý Venue. Hai bên tự liên
-        hệ và thỏa thuận ngoài ứng dụng.
-      operationId: getVenuesVenueidManagerApplications
+        - Owner và Manager
+      summary: Xem chi tiết booking trong Venue quản lý
+      description: |-
+        **Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.
+
+        **Phạm vi:** Booking thuộc Venue trên đường dẫn mà người gọi được quản lý.
+
+        Trả chi tiết booking. Booking thuộc Venue khác hoặc ngoài phạm vi quản lý trả 404; không trả profile người đặt.
+      operationId: getVenueBooking
       responses:
         '200':
           description: Thành công.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OwnerApplicationView'
+                $ref: '#/components/schemas/Booking'
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /venues/{venueId}/managers:
-    parameters:
-      - name: venueId
-        in: path
-        required: true
-        description: ID của tài nguyên.
-        schema:
-          type: string
-          format: uuid
-          example: c703f228-62f7-4ee0-b527-652f8152c026
-    post:
-      tags:
-        - Managers
-      summary: Owner xác nhận bổ nhiệm Manager
-      description: Chỉ Owner sở hữu Venue. applicationId phải thuộc Venue này, đã có sự đồng ý chia sẻ và đang SUBMITTED.
-        Ứng viên phải đang hoạt động, có role nền USER và chưa quản lý Venue khác. Server tạo quyền quản lý toàn
-        bộ Court và booking thuộc Venue, chuyển hồ sơ thành APPOINTED trong cùng thao tác nguyên tử. Nộp cùng hồ
-        sơ đã bổ nhiệm trả 409. Số Manager tối đa của một Venue và việc thay thế Manager vẫn cần chốt.
-      operationId: postVenuesVenueidManagers
-      responses:
-        '201':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ManagerAppointment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AppointManagerRequest'
-    get:
-      tags:
-        - Managers
-      summary: Owner xem profile Manager đã bổ nhiệm
-      description: Chỉ Owner sở hữu Venue. Trả các bổ nhiệm hiện tại cùng profile Manager. Đây không phải danh bạ
-        người dùng công khai; User và Manager khác không được dùng endpoint này.
-      operationId: getVenuesVenueidManagers
-      responses:
-        '200':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OwnerManagerView'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /venues/{venueId}/feedback:
-    parameters:
-      - name: venueId
-        in: path
-        required: true
-        description: ID của tài nguyên.
-        schema:
-          type: string
-          format: uuid
-          example: c703f228-62f7-4ee0-b527-652f8152c026
-    get:
-      tags:
-        - Feedback
-      summary: Xem feedback của Venue
-      description: 'Đề xuất: công khai nội dung feedback, không trả profile hoặc thông tin liên hệ tác giả. Venue
-        chưa có feedback trả danh sách rỗng.'
-      operationId: getVenuesVenueidFeedback
-      responses:
-        '200':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Feedback'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security: []
-    post:
-      tags:
-        - Feedback
-      summary: Gửi feedback cho Venue
-      description: USER, bao gồm USER đang là Manager theo đề xuất phân quyền. Server lấy tác giả từ token. Bản
-        dự thảo chỉ có nội dung văn bản; điều kiện đã đặt sân, thời điểm được feedback và giới hạn số feedback cần
-        chốt trước khi triển khai.
-      operationId: postVenuesVenueidFeedback
-      responses:
-        '201':
-          description: Thành công.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Feedback'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateFeedbackRequest'
   /admin/accounts:
     get:
       tags:
         - Admin
       summary: Admin xem danh sách tài khoản
-      description: Chỉ ADMIN. Được xem thông tin tài khoản; không bao giờ trả password hoặc password hash.
+      description: |-
+        **Ai được gọi:** Chỉ Admin đã đăng nhập.
+
+        **Phạm vi:** Tài khoản trong hệ thống.
+
+        Xem danh sách tài khoản, có thể lọc theo tên/email và trạng thái. Không trả mật khẩu hoặc password hash.
       operationId: getAdminAccounts
       responses:
         '200':
@@ -867,7 +1105,12 @@ paths:
       tags:
         - Admin
       summary: Admin xem chi tiết tài khoản
-      description: Chỉ ADMIN. Quyền xem thông tin tài khoản không tự cấp quyền Owner/Manager trên Venue.
+      description: |-
+        **Ai được gọi:** Chỉ Admin đã đăng nhập.
+
+        **Phạm vi:** Tài khoản có accountId trên đường dẫn.
+
+        Trả profile và trạng thái tài khoản.
       operationId: getAdminAccountsAccountid
       responses:
         '200':
@@ -886,10 +1129,12 @@ paths:
       tags:
         - Admin
       summary: Admin xóa tài khoản
-      description: 'Chỉ ADMIN. Đề xuất xóa logic: chuyển trạng thái DELETED, chặn đăng nhập và mọi request cần xác
-        thực; giữ tham chiếu lịch sử booking. Gọi lại tài khoản đã xóa trả 204. Đề xuất không cho Admin tự xóa mình,
-        trả 409 SELF_DELETE_NOT_ALLOWED. Chính sách dữ liệu cá nhân và xử lý Venue, quyền Manager, booking còn hiệu
-        lực cần chốt trước khi triển khai endpoint này.'
+      description: |-
+        **Ai được gọi:** Chỉ Admin đã đăng nhập.
+
+        **Phạm vi:** Tài khoản có accountId trên đường dẫn, khác tài khoản Admin đang gọi.
+
+        **Đề xuất xử lý xóa:** chuyển tài khoản sang DELETED và chặn đăng nhập/request cần xác thực; giữ tham chiếu lịch sử booking. Gọi lại tài khoản đã xóa trả 204. Không tự hủy booking. Cần chốt cách xử lý Venue thuộc sở hữu và quyền Manager trước khi triển khai.
       operationId: deleteAdminAccountsAccountid
       responses:
         '204':
@@ -897,7 +1142,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Admin không được tự xóa tài khoản đang sử dụng.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: SELF_DELETE_NOT_ALLOWED
+                message: Không thể tự xóa tài khoản Admin đang đăng nhập.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -916,10 +1168,12 @@ paths:
       tags:
         - Admin
       summary: Admin khóa hoặc mở khóa tài khoản
-      description: 'Chỉ ADMIN. LOCKED chặn đăng nhập và mọi request cần xác thực, kể cả khi JWT chưa hết hạn; cần
-        kiểm tra trạng thái tài khoản trên server. ACTIVE mở khóa. Tài khoản DELETED trả 409. Đề xuất: Admin không
-        tự khóa mình, trả 409 SELF_LOCK_NOT_ALLOWED. Booking và quyền sở hữu/bổ nhiệm không tự thay đổi; cách xử
-        lý tiếp theo cần chốt.'
+      description: |-
+        **Ai được gọi:** Chỉ Admin đã đăng nhập.
+
+        **Phạm vi:** Tài khoản có accountId trên đường dẫn, chưa bị xóa.
+
+        LOCKED để khóa, ACTIVE để mở khóa. Khóa chặn đăng nhập và request cần xác thực, kể cả khi token còn hạn. Không tự thay đổi booking, quyền sở hữu hoặc bổ nhiệm. Không cho Admin tự khóa mình.
       operationId: patchAdminAccountsAccountidStatus
       responses:
         '200':
@@ -933,7 +1187,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Tài khoản đã xóa hoặc Admin đang tự khóa mình.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: ACCOUNT_STATUS_CONFLICT
+                message: Không thể thay đổi trạng thái tài khoản này.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -959,11 +1220,9 @@ components:
       properties:
         code:
           type: string
-          example: BOOKING_CONFLICT
           description: Mã lỗi ổn định để client xử lý.
         message:
           type: string
-          example: Sân đã có booking trùng khung giờ.
           description: Thông báo dễ đọc.
     RegisterRequest:
       type: object
@@ -1052,7 +1311,7 @@ components:
             - USER
             - OWNER
             - ADMIN
-          description: 'Đề xuất: Manager là quyền theo Venue, không thay thế role nền USER.'
+          description: Vai trò nền của tài khoản. Manager là quyền quản lý một Venue trên tài khoản USER.
         status:
           type: string
           enum:
@@ -1369,6 +1628,8 @@ components:
           enum:
             - SUBMITTED
             - APPOINTED
+            - REVOKED
+          description: 'SUBMITTED: đã ứng tuyển; APPOINTED: đang được bổ nhiệm; REVOKED: Owner đã thu hồi bổ nhiệm.'
         consentToShareContact:
           type: boolean
           enum:
@@ -1514,27 +1775,42 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: VALIDATION_ERROR
+            message: Dữ liệu gửi lên không hợp lệ.
     Unauthorized:
       description: Chưa đăng nhập, token hết hạn hoặc không hợp lệ.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Cần đăng nhập hoặc đăng nhập lại.
     Forbidden:
-      description: Tài khoản bị khóa hoặc không có quyền thực hiện thao tác.
+      description: Đã xác thực nhưng sai vai trò hoặc tài khoản bị khóa.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: FORBIDDEN
+            message: Tài khoản không có vai trò được phép hoặc đã bị khóa.
     NotFound:
-      description: Không tìm thấy tài nguyên trong phạm vi được phép truy cập.
+      description: Tài nguyên không tồn tại, đã xóa hoặc nằm ngoài phạm vi dữ liệu được phép truy cập.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: NOT_FOUND
+            message: Không tìm thấy tài nguyên trong phạm vi được phép truy cập.
     Conflict:
       description: Xung đột dữ liệu hoặc trạng thái hiện tại.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: CONFLICT
+            message: Thao tác xung đột với trạng thái hiện tại.
