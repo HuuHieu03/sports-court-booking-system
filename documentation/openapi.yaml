@@ -2,9 +2,8 @@ openapi: 3.0.3
 info:
   title: Football Booking MVP API
   version: 0.2.0
-  description: Tài liệu API cho prototype đặt và quản lý sân bóng đá. Venue là cụm sân; Court là từng sân trong
-    Venue. API hỗ trợ tìm và đặt sân, quản lý Venue/Court, tuyển Manager và quản trị tài khoản. Đây là bản thiết
-    kế đang rà soát; backend chưa được triển khai.
+  description: Ứng dụng giúp người dùng tìm và đặt sân bóng đá, đồng thời hỗ trợ chủ sân và quản lý vận hành cụm sân,
+    theo dõi lịch đặt.
 servers:
   - url: http://localhost:3000/api/v1
     description: Backend local dự kiến, chưa triển khai
@@ -969,7 +968,7 @@ paths:
 
         **Phạm vi:** Booking của mọi Court trong Venue người gọi được quản lý.
 
-        Trả danh sách booking; có thể lọc theo courtId và status. Court dùng để lọc phải thuộc Venue này. Không trả profile hoặc liên hệ cá nhân của người đặt.
+        Trả danh sách booking kèm profile người đặt gồm tên, email và số điện thoại. Có thể lọc theo courtId và status; Court dùng để lọc phải thuộc Venue này. Chỉ xem được profile của người có booking trong Venue mình quản lý.
       operationId: getVenuesVenueidBookings
       responses:
         '200':
@@ -979,7 +978,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Booking'
+                  $ref: '#/components/schemas/BookingWithCustomerProfile'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -1031,7 +1030,7 @@ paths:
 
         **Phạm vi:** Booking thuộc Venue trên đường dẫn mà người gọi được quản lý.
 
-        Trả chi tiết booking. Booking thuộc Venue khác hoặc ngoài phạm vi quản lý trả 404; không trả profile người đặt.
+        Trả chi tiết booking kèm profile người đặt gồm tên, email và số điện thoại. Booking thuộc Venue khác hoặc ngoài phạm vi quản lý trả 404.
       operationId: getVenueBooking
       responses:
         '200':
@@ -1039,7 +1038,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking'
+                $ref: '#/components/schemas/BookingWithCustomerProfile'
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
@@ -1279,8 +1278,8 @@ components:
           writeOnly: true
     AccountProfile:
       type: object
-      description: 'Thông tin riêng tư: chỉ chính tài khoản, Admin, hoặc Owner xem Manager thuộc Venue của mình
-        qua endpoint Managers.'
+      description: Thông tin tài khoản dành cho chính người dùng, Admin hoặc Owner xem Manager đã bổ nhiệm.
+        Owner và Manager xem profile khách đặt sân qua CustomerProfile trong các API booking của Venue.
       required:
         - id
         - fullName
@@ -1522,8 +1521,7 @@ components:
           example: '2026-10-20T19:00:00+07:00'
     Booking:
       type: object
-      description: Chỉ người đặt và Owner/Manager đúng Venue được đọc. Không kèm profile hay thông tin liên hệ người
-        đặt.
+      description: Thông tin booking. API quản lý Venue bổ sung profile người đặt qua BookingWithCustomerProfile.
       required:
         - id
         - venueId
@@ -1573,6 +1571,40 @@ components:
           type: string
           format: date-time
           nullable: true
+    CustomerProfile:
+      type: object
+      description: Profile người đã đặt sân, chỉ trả cho Owner sở hữu Venue hoặc Manager đang quản lý Venue chứa
+        booking. Không cho phép xem profile khách chỉ bằng một userId tùy ý.
+      required:
+        - id
+        - fullName
+        - email
+        - phone
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c703f228-62f7-4ee0-b527-652f8152c026
+        fullName:
+          type: string
+          example: Nguyễn Minh Anh
+        email:
+          type: string
+          format: email
+          example: minhanh@example.com
+        phone:
+          type: string
+          example: '0901234567'
+    BookingWithCustomerProfile:
+      description: Booking kèm profile người đặt, dành riêng cho các API quản lý booking trong Venue.
+      allOf:
+        - $ref: '#/components/schemas/Booking'
+        - type: object
+          required:
+            - customerProfile
+          properties:
+            customerProfile:
+              $ref: '#/components/schemas/CustomerProfile'
     UpdateRecruitmentRequest:
       type: object
       additionalProperties: false
