@@ -29,7 +29,7 @@
         document.getElementById('file-help').hidden = false;
       } else if (typeof SwaggerUIBundle === 'function') {
         SwaggerUIBundle({
-          url: './openapi.yaml',
+          url: './openapi.yaml?updated=' + Date.now(),
           dom_id: '#swagger-ui',
           deepLinking: true,
           displayRequestDuration: true,
