@@ -11,6 +11,7 @@ documentation/
     PRD.md
   architecture/
     ARCHITECTURE.md
+    DATABASE.md
   api/
     openapi.yaml
     swagger.html
@@ -22,6 +23,7 @@ documentation/
 | --- | --- |
 | Ứng dụng làm gì, ai được làm gì, use case và quy tắc nghiệp vụ | [PRD](product/PRD.md) |
 | Tech stack, module, phân lớp, dữ liệu và lỗi baseline có chủ đích | [Kiến trúc](architecture/ARCHITECTURE.md) |
+| Bảng, cột, ràng buộc, index và ERD của database | [Thiết kế database](architecture/DATABASE.md) |
 | Endpoint, quyền truy cập, request, response và mã lỗi | [OpenAPI](api/openapi.yaml) hoặc [Swagger trực tuyến](https://huuhieu03.github.io/sports-court-booking-system/) |
 | Công việc đã làm, kết quả kiểm tra và vướng mắc của team | [Worklog](worklogs/README.md) |
 
@@ -34,7 +36,7 @@ Thành viên mới nên đọc PRD, tiếp đến kiến trúc, rồi xem các A
 | `src/modules/` | Backend theo nhóm nghiệp vụ: auth, users, venues, bookings, staffing, feedback, notifications. |
 | `src/common/` | Guard, decorator, filter, interceptor và pipe dùng chung. |
 | `src/config/` | Cấu hình backend. |
-| `prisma/migrations/` | Migration database khi triển khai. |
+| `prisma/` | Prisma schema, migration và dữ liệu mẫu. Xem [thiết kế database](architecture/DATABASE.md#triển-khai). |
 | `frontend/src/modules/` | Các nhóm giao diện tương ứng nghiệp vụ backend. Mỗi nhóm có pages, components và api. |
 | `frontend/src/app/` | Khởi tạo giao diện và cấu hình điều hướng. |
 | `frontend/src/components/`, `frontend/src/hooks/`, `frontend/src/lib/`, `frontend/src/types/` | Thành phần giao diện, hook, tiện ích và kiểu dữ liệu dùng chung. |
@@ -44,7 +46,7 @@ Thành viên mới nên đọc PRD, tiếp đến kiến trúc, rồi xem các A
 
 Mỗi module backend có `presentation/dto`, `application`, `domain` và `infrastructure`, tương ứng Controller/DTO, Service, mô hình nghiệp vụ/interface Repository và Repository triển khai. Chi tiết trách nhiệm nằm trong tài liệu kiến trúc.
 
-Khung mã nguồn hiện chỉ có thư mục. Chưa có file triển khai, cấu hình package hoặc môi trường chạy. Git không lưu thư mục rỗng; các thư mục này chỉ xuất hiện trong repo sau khi có file thực tế. Không thêm file giữ chỗ ở bước này.
+Hiện mới có phần database: `package.json`, `prisma.config.ts`, `prisma/`, `docker/`, `docker-compose.yml` và `.env.example`. Backend và frontend chưa có mã nguồn. Git không lưu thư mục rỗng; các thư mục còn lại chỉ xuất hiện trong repo sau khi có file thực tế. Không thêm file giữ chỗ.
 
 ## Khi cập nhật tài liệu
 

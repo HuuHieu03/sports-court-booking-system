@@ -83,23 +83,9 @@ Luồng xử lý: **Controller → Service → Repository → PostgreSQL**. Serv
 
 ## Dữ liệu chính
 
-```mermaid
-erDiagram
-    Account ||--o{ Venue : owns
-    Venue ||--o{ Court : contains
-    Court ||--o{ Booking : receives
-    Account ||--o{ Booking : books
-    Account ||--o{ ManagerAppointment : holds
-    Venue ||--o{ ManagerAppointment : records
-    Account ||--o{ ManagerApplication : submits
-    Venue ||--o{ ManagerApplication : receives
-    Account ||--o{ Feedback : writes
-    Venue ||--o{ Feedback : receives
-```
+Database gồm các bảng `accounts`, `venues`, `courts`, `bookings`, `manager_applications`, `manager_appointments`, `feedback` và `notifications`. Manager là quyền gắn với Venue qua `manager_appointments`, không phải một tài khoản hoặc role riêng. Account, Venue và Court dùng xóa logic; booking và lịch sử bổ nhiệm vẫn được giữ.
 
-`ManagerAppointment` lưu bổ nhiệm và lịch sử thu hồi. Một tài khoản có thể có nhiều bổ nhiệm, nhưng mỗi Venue chỉ có tối đa một Manager đang được bổ nhiệm. Manager là quyền gắn với Venue trên tài khoản, không phải một tài khoản riêng.
-
-Venue, Court và Account dùng xóa logic. Booking và lịch sử bổ nhiệm vẫn được giữ. Thời gian booking được lưu và so sánh theo thời điểm có múi giờ.
+ERD, ràng buộc, index và cách xử lý đồng thời ở tầng dữ liệu nằm trong [thiết kế database](DATABASE.md).
 
 ## Các luồng cần giữ rõ
 

@@ -1,0 +1,226 @@
+// Thiết kế chi tiết: documentation/architecture/DATABASE.md
+// CHECK constraint không khai báo được trong schema, được viết bằng SQL trong migration.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  moduleFormat    = "cjs"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountRole {
+  USER
+  OWNER
+  ADMIN
+
+  @@map("account_role")
+}
+
+enum AccountStatus {
+  ACTIVE
+  LOCKED
+  DELETED
+
+  @@map("account_status")
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+
+  @@map("booking_status")
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  APPOINTED
+  REVOKED
+
+  @@map("application_status")
+}
+
+enum NotificationType {
+  BOOKING_CANCELLED_BY_VENUE
+
+  @@map("notification_type")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+
+  @@map("notification_status")
+}
+
+model Account {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName     String        @map("full_name") @db.VarChar(120)
+  /// App chuẩn hóa: trim và chữ thường.
+  email        String        @unique @db.VarChar(254)
+  /// App chuẩn hóa sang E.164, ví dụ +84901234567.
+  phone        String        @unique @db.VarChar(30)
+  passwordHash String        @map("password_hash")
+  role         AccountRole
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(3)
+
+  ownedVenues         Venue[]
+  bookings            Booking[]            @relation("BookingUser")
+  cancelledBookings   Booking[]            @relation("BookingCancelledBy")
+  managerApplications ManagerApplication[]
+  managerAppointments ManagerAppointment[]
+  feedback            Feedback[]
+  notifications       Notification[]
+
+  @@map("accounts")
+}
+
+model Venue {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId            String    @map("owner_id") @db.Uuid
+  name               String    @db.VarChar(200)
+  address            String    @db.VarChar(500)
+  description        String?   @db.VarChar(2000)
+  recruitmentOpen    Boolean   @default(false) @map("recruitment_open")
+  recruitmentMessage String?   @map("recruitment_message") @db.VarChar(2000)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  owner               Account              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  courts              Court[]
+  bookings            Booking[]
+  managerApplications ManagerApplication[]
+  managerAppointments ManagerAppointment[]
+  feedback            Feedback[]
+
+  @@index([ownerId], where: raw("deleted_at IS NULL"))
+  @@map("venues")
+}
+
+model Court {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  venueId     String    @map("venue_id") @db.Uuid
+  name        String    @db.VarChar(200)
+  description String?   @db.VarChar(2000)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  venue    Venue     @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  // Đích của FK kép từ bookings(court_id, venue_id).
+  @@unique([id, venueId])
+  @@index([venueId], where: raw("deleted_at IS NULL"))
+  @@map("courts")
+}
+
+model Booking {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courtId            String        @map("court_id") @db.Uuid
+  /// Luôn bằng venue_id của Court, được bảo đảm bằng FK kép.
+  venueId            String        @map("venue_id") @db.Uuid
+  userId             String        @map("user_id") @db.Uuid
+  startsAt           DateTime      @map("starts_at") @db.Timestamptz(3)
+  endsAt             DateTime      @map("ends_at") @db.Timestamptz(3)
+  status             BookingStatus @default(CONFIRMED)
+  cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelledById      String?       @map("cancelled_by_id") @db.Uuid
+  /// Bắt buộc khi Owner/Manager hủy booking của khách.
+  cancellationReason String?       @map("cancellation_reason") @db.VarChar(1000)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  court         Court          @relation(fields: [courtId, venueId], references: [id, venueId], onDelete: Restrict)
+  venue         Venue          @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  user          Account        @relation("BookingUser", fields: [userId], references: [id], onDelete: Restrict)
+  cancelledBy   Account?       @relation("BookingCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  notifications Notification[]
+
+  // Baseline cố ý chưa có ràng buộc chống chồng giờ; xem DATABASE.md.
+  @@index([courtId, startsAt])
+  @@index([venueId, startsAt])
+  @@index([userId, startsAt])
+  @@map("bookings")
+}
+
+model ManagerApplication {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  venueId     String            @map("venue_id") @db.Uuid
+  applicantId String            @map("applicant_id") @db.Uuid
+  status      ApplicationStatus @default(SUBMITTED)
+  /// Server ghi nhận khi User đồng ý chia sẻ liên hệ.
+  consentedAt DateTime          @map("consented_at") @db.Timestamptz(3)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  venue       Venue               @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  applicant   Account             @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  appointment ManagerAppointment?
+
+  // Viết đúng dạng PostgreSQL lưu `status IN ('SUBMITTED', 'APPOINTED')`, nếu không Prisma báo lệch schema.
+  @@unique([venueId, applicantId], where: raw("status = ANY (ARRAY['SUBMITTED'::application_status, 'APPOINTED'::application_status])"))
+  @@index([venueId, createdAt])
+  @@map("manager_applications")
+}
+
+model ManagerAppointment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String    @unique @map("application_id") @db.Uuid
+  venueId       String    @map("venue_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  appointedAt   DateTime  @default(now()) @map("appointed_at") @db.Timestamptz(3)
+  /// NULL nghĩa là bổ nhiệm đang hiệu lực.
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  application ManagerApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  venue       Venue              @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  user        Account            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([venueId], where: raw("revoked_at IS NULL"))
+  @@index([userId], where: raw("revoked_at IS NULL"))
+  @@map("manager_appointments")
+}
+
+model Feedback {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  venueId   String   @map("venue_id") @db.Uuid
+  /// Không trả ra API công khai.
+  authorId  String   @map("author_id") @db.Uuid
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  venue  Venue   @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  author Account @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([venueId, createdAt(sort: Desc)])
+  @@map("feedback")
+}
+
+model Notification {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId  String             @map("recipient_id") @db.Uuid
+  bookingId    String?            @map("booking_id") @db.Uuid
+  type         NotificationType
+  status       NotificationStatus @default(PENDING)
+  attemptCount Int                @default(0) @map("attempt_count")
+  lastError    String?            @map("last_error")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  sentAt       DateTime?          @map("sent_at") @db.Timestamptz(3)
+
+  recipient Account  @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  // Thử lại request hủy không tạo thông báo trùng.
+  @@unique([type, bookingId])
+  @@index([createdAt], where: raw("status = 'PENDING'"))
+  @@map("notifications")
+}

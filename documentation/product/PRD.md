@@ -39,6 +39,7 @@ Người đăng ký chọn User hoặc Owner. Manager được bổ nhiệm từ
 ## Quy tắc nghiệp vụ
 
 - Tất cả mọi người đã đăng ký trong hệ thống đều là User bao gồm cả Owner và Manager.
+- Email và số điện thoại không trùng giữa các tài khoản, kể cả tài khoản đã xóa.
 - Booking được xác nhận tự động, không cần Owner hoặc Manager duyệt.
 - Giờ bắt đầu phải ở tương lai, giờ kết thúc phải sau giờ bắt đầu. Một Court không có hai booking chưa hủy trùng giờ. Hai booking có thể liền nhau.
 - Thời hạn hủy được tính theo giờ hệ thống. Khi dùng quyền User, mỗi người chỉ hủy booking của mình. Owner và Manager được hủy booking của khách trong Venue mình quản lý, bắt buộc nhập lý do và gửi thông báo cho người đặt.
