@@ -37,7 +37,7 @@ paths:
 
         **Phạm vi:** Tài khoản mới của người đăng ký.
 
-        Chọn USER hoặc OWNER khi đăng ký. Cung cấp tên, email, số điện thoại và mật khẩu. Thành công trả thông tin tài khoản và access token; email đã được dùng trả 409.
+        Chọn USER hoặc OWNER khi đăng ký. Cung cấp tên, email, số điện thoại và mật khẩu. Thành công trả thông tin tài khoản và access token; email hoặc số điện thoại đã được dùng trả 409.
       operationId: postAuthRegister
       responses:
         '201':
@@ -1338,7 +1338,8 @@ components:
           minLength: 1
           maxLength: 30
           example: 0901234567
-          description: Giữ dưới dạng chuỗi để bảo toàn số 0 đầu và mã quốc gia.
+          description: Server chuẩn hóa sang E.164 (vùng mặc định VN) trước khi lưu và kiểm tra trùng, ví dụ 0901234567
+            lưu thành +84901234567. Không trùng với tài khoản khác, kể cả tài khoản đã xóa.
         password:
           type: string
           format: password
@@ -1394,7 +1395,7 @@ components:
           example: minhanh@example.com
         phone:
           type: string
-          example: 0901234567
+          example: '+84901234567'
         role:
           type: string
           enum:
@@ -1694,7 +1695,7 @@ components:
           example: minhanh@example.com
         phone:
           type: string
-          example: 0901234567
+          example: '+84901234567'
     BookingWithCustomerProfile:
       description: Booking kèm profile người đặt, dành riêng cho các API quản lý booking trong Venue.
       allOf:
@@ -1796,7 +1797,7 @@ components:
           example: minhanh@example.com
         phone:
           type: string
-          example: 0901234567
+          example: '+84901234567'
     OwnerApplicationView:
       type: object
       required:
