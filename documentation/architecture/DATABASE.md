@@ -151,6 +151,7 @@ Email và số điện thoại không được dùng lại, kể cả khi tài k
 | courts | index `(venue_id) WHERE deleted_at IS NULL` | Danh sách Court của Venue |
 | bookings | `FOREIGN KEY (court_id, venue_id) REFERENCES courts(id, venue_id)` | `venue_id` luôn đúng Venue của Court |
 | bookings | `CHECK(ends_at > starts_at)` | Giờ kết thúc sau giờ bắt đầu |
+| bookings | `CHECK(ends_at - starts_at >= INTERVAL '30 minutes' AND ends_at - starts_at <= INTERVAL '4 hours')` | Thời lượng mỗi lượt đặt từ 30 phút đến 4 giờ |
 | bookings | `CONFIRMED`: `cancelled_at`, `cancelled_by_id`, `cancellation_reason` đều NULL. `CANCELLED`: `cancelled_at`, `cancelled_by_id` NOT NULL | Trạng thái và dữ liệu hủy nhất quán |
 | bookings | `CHECK(status <> 'CANCELLED' OR cancelled_by_id = user_id OR cancellation_reason IS NOT NULL)` | Hủy booking của khách bắt buộc có lý do |
 | bookings | `CHECK(cancellation_reason IS NULL OR btrim(cancellation_reason) <> '')` | Lý do hủy không chỉ có khoảng trắng |
@@ -204,7 +205,7 @@ Các quy tắc sau không thể hiện bằng ràng buộc schema và do Service
 | --- | --- |
 | Rating, quyền sửa và xóa feedback | Thêm `feedback.rating`, `updated_at`, `deleted_at`; có thể gắn `booking_id` |
 | Kênh gửi thông báo | Thêm `notifications.channel` và `next_attempt_at` |
-| Giờ mở cửa, độ dài lượt đặt | Thêm bảng giờ mở cửa theo Venue hoặc Court; MVP cho chọn giờ tự do |
+| Giờ mở cửa | Thêm bảng giờ mở cửa theo Venue hoặc Court; độ dài lượt đặt đã chốt từ 30 phút đến 4 giờ qua CHECK constraint |
 | Admin xóa tài khoản Owner | Không cần đổi schema; cần chốt cách xử lý Venue và bổ nhiệm |
 
 ## Triển khai
@@ -213,6 +214,7 @@ Các quy tắc sau không thể hiện bằng ràng buộc schema và do Service
 | --- | --- |
 | `prisma/schema.prisma` | Model, enum, FK và index, gồm cả partial index |
 | `prisma/migrations/20261018000000_baseline/` | Migration baseline: bảng, index và CHECK constraint |
+| `prisma/migrations/20261025143000_add_booking_duration_check/` | Migration bổ sung CHECK constraint thời lượng đặt sân (30 phút - 4 giờ) |
 | `prisma/seed.ts` | Dữ liệu mẫu, chạy lại nhiều lần không tạo bản ghi trùng |
 | `prisma.config.ts` | Cấu hình Prisma CLI: đường dẫn schema, migration, lệnh seed và `DATABASE_URL` |
 | `docker-compose.yml` | Service `postgres` (PostgreSQL 17) và `db-init` cho môi trường local |
