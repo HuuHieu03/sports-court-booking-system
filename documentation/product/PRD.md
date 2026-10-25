@@ -41,7 +41,7 @@ Người đăng ký chọn User hoặc Owner. Manager được bổ nhiệm từ
 - Tất cả mọi người đã đăng ký trong hệ thống đều là User bao gồm cả Owner và Manager.
 - Email và số điện thoại không trùng giữa các tài khoản, kể cả tài khoản đã xóa.
 - Booking được xác nhận tự động, không cần Owner hoặc Manager duyệt.
-- Giờ bắt đầu phải ở tương lai, giờ kết thúc phải sau giờ bắt đầu. Một Court không có hai booking chưa hủy trùng giờ. Hai booking có thể liền nhau.
+- Giờ bắt đầu phải ở tương lai, giờ kết thúc phải sau giờ bắt đầu, thời lượng mỗi lượt đặt từ 30 phút đến 4 giờ. Một Court không có hai booking chưa hủy trùng giờ. Hai booking có thể liền nhau.
 - Thời hạn hủy được tính theo giờ hệ thống. Khi dùng quyền User, mỗi người chỉ hủy booking của mình. Owner và Manager được hủy booking của khách trong Venue mình quản lý, bắt buộc nhập lý do và gửi thông báo cho người đặt.
 - Một Manager có thể quản lý nhiều Venue. Mỗi Venue có tối đa một Manager tại một thời điểm. Owner chỉ bổ nhiệm hoặc thu hồi Manager trong Venue thuộc sở hữu của mình.
 - User không được xem hồ sơ User khác. Owner và Manager được xem hồ sơ khách đã đặt sân trong Venue mình quản lý.
@@ -58,7 +58,7 @@ Người đăng ký chọn User hoặc Owner. Manager được bổ nhiệm từ
 - Số Manager: hiện mỗi Venue có tối đa một Manager, một Manager có thể quản lý nhiều Venue. Cần xác định cách thay thế Manager và xử lý khi hai hồ sơ được phê duyệt đồng thời.
 - Feedback và rating: hiện có feedback bằng văn bản. Cần chốt điều kiện đã hoàn tất booking, số lần đánh giá, quyền sửa/xóa, thang điểm và cách tính rating của Venue.
 - Hủy booking của khách: cần chốt thời hạn Owner/Manager được hủy, kênh gửi thông báo và cách gửi lại nếu thất bại. Thông báo phải có booking liên quan và lý do hủy, tránh gửi trùng khi request được thử lại.
-- Giờ mở cửa, độ dài mỗi lượt đặt và cách chia khung giờ.
+- Giờ mở cửa và cách chia khung giờ. Độ dài mỗi lượt đặt đã được cố định từ 30 phút đến 4 giờ qua CHECK constraint.
 - Khi Admin xóa tài khoản, cần chốt cách xử lý Venue thuộc sở hữu, quyền Manager và dữ liệu cá nhân. Cơ chế xóa logic và giữ lịch sử đã được thống nhất.
 
 Chi tiết endpoint, dữ liệu gửi lên và kết quả trả về nằm trong [Swagger](https://huuhieu03.github.io/sports-court-booking-system/) và [đặc tả OpenAPI](../api/openapi.yaml).
