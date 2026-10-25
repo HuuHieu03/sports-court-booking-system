@@ -1,0 +1,6 @@
+.git
+node_modules
+.env
+src/generated
+documentation
+my_workspace
