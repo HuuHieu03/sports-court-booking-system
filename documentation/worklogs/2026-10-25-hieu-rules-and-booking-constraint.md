@@ -16,6 +16,18 @@ Nhánh hoặc commit: `hieu`
   - Tạo file migration `prisma/migrations/20261025143000_add_booking_duration_check/migration.sql` bổ sung `CHECK (ends_at - starts_at >= INTERVAL '30 minutes' AND ends_at - starts_at <= INTERVAL '4 hours')`.
   - Cập nhật tài liệu thiết kế CSDL `documentation/architecture/DATABASE.md` (mục Ràng buộc và index, Điểm chưa chốt, Danh mục migration).
   - Cập nhật `documentation/product/PRD.md` để đồng bộ quy tắc nghiệp vụ về thời lượng đặt sân.
+- Thiết kế Concept Frontend và xây dựng bản Demo mẫu tương tác (Interactive UI Prototype):
+  - Đề xuất kiến trúc Frontend gồm 3 phân hệ: Public/Customer Booking Flow, Manager/Owner Operations Board, và Admin Console.
+  - Xây dựng bản demo trực quan `fe_concept_demo.html` theo phong cách Athletic Modernism (Deep Pitch Green, Turf Accent, JetBrains Mono numbers).
+  - Tích hợp 2 chế độ: Khách đặt sân (Court Time Slot Timeline với kiểm tra ràng buộc 30m-4h) và Quản lý sân (Bảng điều độ Dispatch Board, hủy lịch kèm lý do bắt buộc).
+- Cải tiến và tối ưu UX bản Demo Frontend v3 hoàn thiện:
+  - Khôi phục lại toàn bộ phối màu Dark Pitch Athletic ban đầu theo yêu cầu người dùng, giữ vững tinh thần sân cỏ ban đêm cao cấp.
+  - Chuyển sang hệ font Inter và system font stack tự nhiên, sắc nét, loại bỏ cảm giác sượng và giả.
+  - Xây dựng hoàn chỉnh các phân hệ quản lý chuyên biệt cho Manager và Owner:
+    + Manager: Bảng điều độ lịch khách hôm nay, xem hồ sơ khách đặt, hủy sân kèm lý do bắt buộc, và Quản lý sân con (Courts CRUD, thêm/xóa sân).
+    + Owner: Quản lý cụm sân sở hữu (Venues), toàn quyền quản lý sân con và lịch khách, đặc quyền Nhân sự (bật/tắt tuyển dụng, xem ứng viên, duyệt bổ nhiệm và thu hồi quyền Manager tức thì).
+  - Đảm bảo tính liên thông tuyệt đối: Owner và Manager luôn có thanh điều hướng của User bình thường để tự tìm và đặt sân cá nhân đi đá.
+  - Tích hợp Admin Console (khóa/mở khóa/xóa logic tài khoản) và kiến trúc SPA Component Progressive Disclosure (Persistent Header Shell, Outlet mượt mà).
 
 ## Kiểm tra
 
