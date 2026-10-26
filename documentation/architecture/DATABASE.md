@@ -181,7 +181,14 @@ Email và số điện thoại không được dùng lại, kể cả khi tài k
 
 ## Đồng thời và baseline có lỗi chủ đích
 
-**Đặt trùng giờ.** Migration baseline không có `EXCLUDE` để giữ lỗi race condition chủ đích mô tả trong [kiến trúc](ARCHITECTURE.md#baseline-có-lỗi-chủ-đích). Bản cải tiến thêm migration SQL riêng gồm `CREATE EXTENSION btree_gist` và ràng buộc `EXCLUDE`. Service bắt lỗi `23P01` và trả 409 `BOOKING_CONFLICT`.
+Chi tiết về 5 điểm nút thắt/khiếm khuyết kiến trúc chủ đích của bản Baseline và hướng giải quyết cho nhóm cải tiến được quy định cụ thể tại [Kiến trúc ứng dụng - Baseline có lỗi chủ đích (Intentional Defect Hooks)](ARCHITECTURE.md#baseline-có-lỗi-chủ-đích-intentional-defect-hooks).
+
+- **HOOK-01 (Race Condition Đặt Sân - Check-Then-Act):** Migration baseline cố tình không có ràng buộc EXCLUDE để giữ lỗi race condition. Bản cải tiến thêm extension tree_gist và ràng buộc EXCLUDE USING gist (court_id WITH =, tstzrange(starts_at, ends_at, \'[)\') WITH &&) WHERE (status = \'CONFIRMED\'), hoặc sử dụng Pessimistic Lock (SELECT FOR UPDATE), bắt lỗi 23P01 và trả 409 BOOKING_CONFLICT.
+- **HOOK-02 (N+1 Query Loop trong API Đọc):** Baseline dùng vòng lặp or...of truy vấn Courts và Manager theo từng Venue. Bản cải tiến gom nhóm bằng Single SQL JOIN/include đa tầng hoặc Redis Read Cache.
+- **HOOK-03 (Ghép nối đồng bộ Outbox Notification):** Baseline gửi thông báo đồng bộ (delay 800ms) trong request hủy sân. Bản cải tiến ghi 
+otifications (status = PENDING) trong transaction và xử lý bất đồng bộ qua background worker / BullMQ queue.
+- **HOOK-04 (Thắt cổ chai I/O Dynamic RBAC):** Baseline truy vấn CSDL liên tục trên mỗi request của Manager/Owner. Bản cải tiến áp dụng Redis Cache với Event-driven Invalidation khi thu hồi quyền.
+- **HOOK-05 (Thiếu Rate Limiting phân tán):** Baseline không có rate limiter phân tán trên các endpoint công khai. Bản cải tiến tích hợp NestJS Throttler với Redis storage.
 
 **Đặt sân khi đang xóa Court/Venue.** Transaction đặt sân khóa Court bằng `SELECT ... WHERE id = $1 AND deleted_at IS NULL FOR SHARE`. Transaction xóa khóa các Court liên quan bằng `FOR UPDATE`, kiểm tra không còn booking `CONFIRMED` có `ends_at > now()` rồi mới xóa logic. Hai lượt đặt sân cùng giữ `FOR SHARE` không chặn nhau, nên baseline vẫn tái hiện được lỗi đặt trùng.
 
