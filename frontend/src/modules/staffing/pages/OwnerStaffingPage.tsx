@@ -47,9 +47,9 @@ export const OwnerStaffingPage: React.FC = () => {
     setIsEditRecruitmentOpen(false);
   };
 
-  const handleExecuteAppoint = () => {
+  const handleExecuteAppoint = async () => {
     if (!appointingApp || !venue) return;
-    const res = appointManager(venue.id, appointingApp);
+    const res = await appointManager(venue.id, appointingApp);
     if (res.success) {
       setAppointingApp(null);
       setAppointError('');
@@ -58,14 +58,14 @@ export const OwnerStaffingPage: React.FC = () => {
     }
   };
 
-  const handleRevoke = () => {
+  const handleRevoke = async () => {
     if (!venue) return;
     if (
       window.confirm(
         'Quy tắc PRD & Database:\nThu hồi Manager có hiệu lực ngay lập tức tại CSDL (revoked_at ghi nhận) và chặn toàn bộ quyền quản trị sân con/lịch khách dù token của người này còn hạn.\n\nBạn có chắc chắn muốn thu hồi?'
       )
     ) {
-      revokeManager(venue.id);
+      await revokeManager(venue.id);
     }
   };
 

@@ -60,13 +60,13 @@ export const ManagerSchedulePage: React.FC = () => {
     setValidationError('');
   };
 
-  const handleExecuteCancel = () => {
+  const handleExecuteCancel = async () => {
     if (!reason.trim()) {
       setValidationError('Ràng buộc CSDL (CHECK constraint): Lý do hủy sân không được để trống khi Quản lý/Chủ sân hủy lịch của khách!');
       return;
     }
     if (cancellingBooking) {
-      const res = cancelCustomerBooking(cancellingBooking.id, reason.trim());
+      const res = await cancelCustomerBooking(cancellingBooking.id, reason.trim());
       if (res.success) {
         setCancellingBooking(null);
       } else if (res.error) {
