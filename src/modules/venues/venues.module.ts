@@ -12,7 +12,7 @@ import { StaffingModule } from '../staffing/staffing.module';
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => BookingsModule),
     forwardRef(() => StaffingModule),
   ],

@@ -113,9 +113,9 @@ export const ManagerCourtsPage: React.FC = () => {
     setEditingCourt(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingCourtId) return;
-    const res = deleteCourt(deletingCourtId);
+    const res = await deleteCourt(deletingCourtId);
     if (res.success) {
       setDeletingCourtId(null);
       setDeleteErrorMessage('');

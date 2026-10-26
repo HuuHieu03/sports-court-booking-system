@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   UserCheck,
   Star,
-  Calendar,
   Clock,
   ArrowRight,
   AlertCircle,
@@ -255,7 +254,7 @@ export const VenueDetailPage: React.FC = () => {
     }
   };
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     if (!currentUser || !isAuthenticated) {
       setIsConfirmModalOpen(false);
       showToast('info', 'Yêu cầu đăng nhập', 'Vui lòng đăng nhập để tiến hành đặt sân.');
@@ -263,7 +262,7 @@ export const VenueDetailPage: React.FC = () => {
       return;
     }
     if (!selectedSlot) return;
-    const res = bookCourt(
+    const res = await bookCourt(
       selectedSlot.court.id,
       bookingDate,
       selectedSlot.startTime,
@@ -294,16 +293,16 @@ export const VenueDetailPage: React.FC = () => {
     setIsApplyModalOpen(true);
   };
 
-  const handleSubmitApplication = () => {
+  const handleSubmitApplication = async () => {
     if (!venue) return;
-    const res = submitManagerApplication(venue.id, hasConsented);
+    const res = await submitManagerApplication(venue.id, hasConsented);
     if (res.success) {
       setIsApplyModalOpen(false);
       setHasConsented(false);
     }
   };
 
-  const handleSubmitFeedback = (e: React.FormEvent) => {
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !isAuthenticated) {
       showToast('info', 'Yêu cầu đăng nhập', 'Vui lòng đăng nhập để gửi đánh giá.');
@@ -311,7 +310,7 @@ export const VenueDetailPage: React.FC = () => {
       return;
     }
     if (!venue || !feedbackComment.trim()) return;
-    addFeedback(venue.id, rating, feedbackComment.trim());
+    await addFeedback(venue.id, rating, feedbackComment.trim());
     setFeedbackComment('');
   };
 

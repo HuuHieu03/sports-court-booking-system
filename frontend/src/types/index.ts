@@ -16,6 +16,7 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
+  description?: string;
   ownerId: string;
   ownerName: string;
   isRecruiting: boolean;

@@ -11,7 +11,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => VenuesModule),
     NotificationsModule,
   ],

@@ -27,12 +27,12 @@ export const RegisterPage: React.FC = () => {
     return null;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (password.length < 6) {
-      setErrorMessage('Mật khẩu phải có tối thiểu 6 ký tự.');
+    if (password.length < 8) {
+      setErrorMessage('Mật khẩu phải có tối thiểu 8 ký tự theo quy định hệ thống.');
       return;
     }
 
@@ -42,7 +42,7 @@ export const RegisterPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    const res = register({
+    const res = await register({
       name,
       email,
       phone,

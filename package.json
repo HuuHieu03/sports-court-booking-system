@@ -5,8 +5,8 @@
   "description": "Football Booking MVP",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/src/main",
-    "start:dev": "tsx src/main.ts",
+    "start": "node dist/main",
+    "start:dev": "node dist/main",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -32,7 +32,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^3.0.3",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/node": "^26.6.5",
     "@types/passport-jwt": "^4.0.1",

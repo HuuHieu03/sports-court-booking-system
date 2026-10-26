@@ -4,7 +4,7 @@ import { useApp } from '../../../app/AppContext';
 import { LogIn, ShieldAlert, Sparkles, User, Shield, Building2, ClipboardList, ArrowLeft } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login, quickLogin, accounts } = useApp();
+  const { login, quickLogin } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -40,12 +40,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
 
-    const res = login(identifier, password);
+    const res = await login(identifier, password);
     setIsLoading(false);
 
     if (res.success && res.account) {
@@ -55,9 +55,11 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = (accountId: string) => {
+  const handleQuickLogin = async (emailOrId: string) => {
     setErrorMessage('');
-    const res = quickLogin(accountId);
+    setIsLoading(true);
+    const res = await quickLogin(emailOrId);
+    setIsLoading(false);
     if (res.success && res.account) {
       redirectAfterLogin(res.account.role, res.account.appointedVenues);
     } else {
@@ -70,7 +72,7 @@ export const LoginPage: React.FC = () => {
       id: 'ACC-99',
       label: 'Admin Tổng',
       sub: 'Quản trị hệ thống',
-      email: 'admin@pitchsync.vn',
+      email: 'admin@example.com',
       role: 'ADMIN',
       icon: Shield,
       color: 'border-purple-800/60 bg-purple-950/40 text-purple-300 hover:border-purple-600',
@@ -88,7 +90,7 @@ export const LoginPage: React.FC = () => {
       id: 'ACC-03',
       label: 'Quản Lý Minh',
       sub: 'Vũ Đình Minh (Manager)',
-      email: 'minh@example.com',
+      email: 'manager.minh@example.com',
       role: 'MANAGER',
       icon: ClipboardList,
       color: 'border-blue-800/60 bg-blue-950/40 text-blue-300 hover:border-blue-600',
@@ -97,7 +99,7 @@ export const LoginPage: React.FC = () => {
       id: 'ACC-01',
       label: 'Khách Đặt Sân',
       sub: 'Nguyễn Văn Lan (User)',
-      email: 'lan@example.com',
+      email: 'user.lan@example.com',
       role: 'USER',
       icon: User,
       color: 'border-emerald-800/60 bg-emerald-950/40 text-emerald-300 hover:border-emerald-600',
@@ -205,7 +207,7 @@ export const LoginPage: React.FC = () => {
                   <button
                     key={acc.id}
                     type="button"
-                    onClick={() => handleQuickLogin(acc.id)}
+                    onClick={() => handleQuickLogin(acc.email)}
                     className={`p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col gap-1 ${acc.color}`}
                   >
                     <div className="flex items-center gap-1.5">
@@ -219,17 +221,15 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {/* Test Locked Account Button */}
-            {accounts.some(a => a.status === 'LOCKED') && (
-              <div className="text-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('ACC-05')}
-                  className="text-[10px] text-slate-500 hover:text-rose-400 underline transition-colors"
-                >
-                  Thử đăng nhập tài khoản vi phạm (LOCKED demo)
-                </button>
-              </div>
-            )}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('locked.user@example.com')}
+                className="text-[10px] text-slate-500 hover:text-rose-400 underline transition-colors"
+              >
+                Thử đăng nhập tài khoản vi phạm (LOCKED demo)
+              </button>
+            </div>
           </div>
 
           {/* Register Link */}

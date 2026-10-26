@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Account,
   Venue,
@@ -18,7 +18,7 @@ import {
   INITIAL_FEEDBACKS,
   INITIAL_NOTIFICATIONS,
 } from '../lib/mock-data';
-import { validateBookingTime } from '../lib/utils';
+import { apiRequest } from '../lib/api-client';
 
 export interface ToastMessage {
   id: string;
@@ -37,9 +37,9 @@ interface AppContextType {
   isManager: (venueId?: string) => boolean;
   isManagerOrOwner: (venueId?: string) => boolean;
 
-  login: (emailOrPhone: string, password?: string) => { success: boolean; error?: string; account?: Account };
-  quickLogin: (accountId: string) => { success: boolean; error?: string; account?: Account };
-  register: (data: { name: string; email: string; phone: string; role: 'USER' | 'OWNER'; password?: string }) => { success: boolean; error?: string; account?: Account };
+  login: (emailOrPhone: string, password?: string) => Promise<{ success: boolean; error?: string; account?: Account }>;
+  quickLogin: (accountId: string) => Promise<{ success: boolean; error?: string; account?: Account }>;
+  register: (data: { name: string; email: string; phone: string; role: 'USER' | 'OWNER'; password?: string }) => Promise<{ success: boolean; error?: string; account?: Account }>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
 
@@ -64,74 +64,64 @@ interface AppContextType {
   showToast: (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => void;
   removeToast: (id: string) => void;
 
-  // Business Actions
-  bookCourt: (courtId: string, bookingDate: string, startTime: string, endTime: string) => { success: boolean; error?: string };
-  cancelMyBooking: (bookingId: string) => void;
-  cancelCustomerBooking: (bookingId: string, reason: string) => { success: boolean; error?: string };
-  addCourt: (court: Omit<Court, 'id'>) => void;
-  updateCourt: (courtId: string, updatedData: Partial<Court>) => void;
-  deleteCourt: (courtId: string) => { success: boolean; message: string };
-  addVenue: (venue: Omit<Venue, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>) => void;
-  toggleRecruitment: (venueId: string, message?: string) => void;
-  submitManagerApplication: (venueId: string, consented: boolean) => { success: boolean; error?: string };
-  appointManager: (venueId: string, application: ManagerApplication) => { success: boolean; error?: string };
-  revokeManager: (venueId: string) => void;
+  // Business Actions (Async connected to Backend API)
+  bookCourt: (courtId: string, bookingDate: string, startTime: string, endTime: string) => Promise<{ success: boolean; error?: string }>;
+  cancelMyBooking: (bookingId: string) => Promise<void>;
+  cancelCustomerBooking: (bookingId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
+  addCourt: (court: Omit<Court, 'id'>) => Promise<void>;
+  updateCourt: (courtId: string, updatedData: Partial<Court>) => Promise<void>;
+  deleteCourt: (courtId: string) => Promise<{ success: boolean; message: string }>;
+  addVenue: (venue: Omit<Venue, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>) => Promise<void>;
+  toggleRecruitment: (venueId: string, message?: string) => Promise<void>;
+  submitManagerApplication: (venueId: string, consented: boolean) => Promise<{ success: boolean; error?: string }>;
+  appointManager: (venueId: string, application: ManagerApplication) => Promise<{ success: boolean; error?: string }>;
+  revokeManager: (venueId: string) => Promise<void>;
   reopenApplication: (applicationId: string) => void;
-  addFeedback: (venueId: string, rating: number, comment: string) => void;
-  toggleAccountStatus: (accountId: string, newStatus: 'ACTIVE' | 'LOCKED') => void;
-  softDeleteAccount: (accountId: string) => void;
+  addFeedback: (venueId: string, rating: number, comment: string) => Promise<void>;
+  toggleAccountStatus: (accountId: string, newStatus: 'ACTIVE' | 'LOCKED') => Promise<void>;
+  softDeleteAccount: (accountId: string) => Promise<void>;
   markNotificationAsRead: (notificationId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const loadFromStorage = <T,>(key: string, fallback: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
+// Helper date formatters
+const formatLocalDate = (iso: string): string => {
+  const d = new Date(iso);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatLocalTime = (iso: string): string => {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+const localDateTimeToISO = (dateStr: string, timeStr: string): string => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [h, min] = timeStr.split(':').map(Number);
+  const localDate = new Date(y, m - 1, d, h, min, 0, 0);
+  return localDate.toISOString();
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Domain data with persistent localStorage
-  const [accounts, setAccounts] = useState<Account[]>(() =>
-    loadFromStorage('pitchsync_accounts', INITIAL_ACCOUNTS)
-  );
-  const [venues, setVenues] = useState<Venue[]>(() =>
-    loadFromStorage('pitchsync_venues', INITIAL_VENUES)
-  );
-  const [courts, setCourts] = useState<Court[]>(() =>
-    loadFromStorage('pitchsync_courts', INITIAL_COURTS)
-  );
-  const [bookings, setBookings] = useState<Booking[]>(() =>
-    loadFromStorage('pitchsync_bookings', INITIAL_BOOKINGS)
-  );
-  const [applications, setApplications] = useState<ManagerApplication[]>(() =>
-    loadFromStorage('pitchsync_applications', INITIAL_APPLICATIONS)
-  );
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>(() =>
-    loadFromStorage('pitchsync_feedbacks', INITIAL_FEEDBACKS)
-  );
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() =>
-    loadFromStorage('pitchsync_notifications', INITIAL_NOTIFICATIONS)
-  );
+  const [venues, setVenues] = useState<Venue[]>(INITIAL_VENUES);
+  const [courts, setCourts] = useState<Court[]>(INITIAL_COURTS);
+  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [applications, setApplications] = useState<ManagerApplication[]>(INITIAL_APPLICATIONS);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>(INITIAL_FEEDBACKS);
+  const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
 
-  // Current logged in user (null = Guest)
   const [currentUser, setCurrentUser] = useState<Account | null>(() => {
     const saved = localStorage.getItem('pitchsync_user');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Validate with current accounts
-        const match = accounts.find(a => a.id === parsed.id);
-        const resolved = match || parsed;
-        if (resolved.status === 'LOCKED' || resolved.status === 'DELETED' || resolved.deletedAt) {
-          localStorage.removeItem('pitchsync_user');
-          return null;
-        }
-        return resolved;
+        return JSON.parse(saved);
       } catch {
         return null;
       }
@@ -140,100 +130,225 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeTab, setActiveTab] = useState<string>('explore');
-  const [selectedVenueId, setSelectedVenueId] = useState<string>('VENUE-01');
+  const [selectedVenueId, setSelectedVenueId] = useState<string>('00000000-0000-4000-8000-000000002001');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Sync state to localStorage
-  useEffect(() => {
-    localStorage.setItem('pitchsync_accounts', JSON.stringify(accounts));
-  }, [accounts]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_venues', JSON.stringify(venues));
-  }, [venues]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_courts', JSON.stringify(courts));
-  }, [courts]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_bookings', JSON.stringify(bookings));
-  }, [bookings]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_applications', JSON.stringify(applications));
-  }, [applications]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_feedbacks', JSON.stringify(feedbacks));
-  }, [feedbacks]);
-
-  useEffect(() => {
-    localStorage.setItem('pitchsync_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('pitchsync_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('pitchsync_user');
-    }
-  }, [currentUser]);
-
-  // Keep currentUser synced if account info in `accounts` changes
-  useEffect(() => {
-    if (currentUser) {
-      const updated = accounts.find(a => a.id === currentUser.id);
-      if (updated) {
-        if (updated.status === 'LOCKED' || updated.status === 'DELETED' || updated.deletedAt) {
-          setCurrentUser(null);
-          localStorage.removeItem('pitchsync_user');
-          showToast('error', 'Phiên làm việc kết thúc', 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động.');
-          return;
-        }
-        if (
-          updated.status !== currentUser.status ||
-          updated.name !== currentUser.name ||
-          updated.appointedVenues !== currentUser.appointedVenues ||
-          updated.role !== currentUser.role
-        ) {
-          setCurrentUser(updated);
-        }
-      }
-    }
-  }, [accounts, currentUser]);
-
-  const showToast = (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
+  const showToast = useCallback((type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
     setToasts(prev => [...prev, { id, type, title, message }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 4500);
-  };
+  }, []);
 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
+
+  // 1. Fetch Venues & Courts from Backend
+  const reloadVenuesAndCourts = useCallback(async () => {
+    try {
+      const backendVenues = await apiRequest<any[]>('/venues');
+      if (Array.isArray(backendVenues) && backendVenues.length > 0) {
+        const mappedVenues: Venue[] = backendVenues.map(v => ({
+          id: v.id,
+          name: v.name,
+          address: v.address,
+          description: v.description || '',
+          ownerId: v.ownerId,
+          ownerName: 'Chủ sân ' + v.name.replace(/^Sân bóng\s*/i, ''),
+          isRecruiting: v.recruitmentOpen ?? v.managerRecruitment?.isOpen ?? false,
+          recruitmentMessage: v.recruitmentMessage ?? v.managerRecruitment?.message ?? '',
+          createdAt: v.createdAt,
+          courtsCount: v.courtCount || 0,
+          activeManager: null,
+        }));
+
+        setVenues(mappedVenues);
+
+        // Fetch courts for each venue
+        const courtPromises = mappedVenues.map(v =>
+          apiRequest<any[]>(`/venues/${v.id}/courts`).catch(() => [])
+        );
+        const courtResults = await Promise.all(courtPromises);
+        const allCourts: Court[] = [];
+
+        courtResults.forEach((courtsList) => {
+          if (Array.isArray(courtsList)) {
+            courtsList.forEach(c => {
+              allCourts.push({
+                id: c.id,
+                venueId: c.venueId,
+                name: c.name,
+                courtType: c.name.includes('7') ? 'SEVEN_A_SIDE' : 'FIVE_A_SIDE',
+                courtTypeLabel: c.name.includes('7') ? 'Sân 7 người' : 'Sân 5 người',
+                description: c.description || 'Sân cỏ nhân tạo tiêu chuẩn.',
+                hourlyRate: c.name.includes('7') ? 350000 : 250000,
+                status: 'ACTIVE',
+              });
+            });
+          }
+        });
+
+        if (allCourts.length > 0) {
+          setCourts(allCourts);
+        }
+      }
+    } catch (err) {
+      console.warn('[PitchSync] Failed to fetch venues from Backend:', err);
+    }
+  }, []);
+
+  // 2. Fetch User Specific Data
+  const reloadUserData = useCallback(async (user: Account) => {
+    try {
+      // Fetch my bookings
+      const myBookings = await apiRequest<any[]>('/me/bookings').catch(() => []);
+      const mappedMyBookings: Booking[] = Array.isArray(myBookings)
+        ? myBookings.map(b => {
+            const startD = new Date(b.startsAt);
+            const endD = new Date(b.endsAt);
+            const duration = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60));
+            return {
+              id: b.id,
+              venueId: b.venueId,
+              venueName: 'Cụm Sân Bóng',
+              courtId: b.courtId,
+              courtName: 'Sân con',
+              userId: b.userId,
+              userName: user.name,
+              userEmail: user.email,
+              userPhone: user.phone,
+              bookingDate: formatLocalDate(b.startsAt),
+              startTime: formatLocalTime(b.startsAt),
+              endTime: formatLocalTime(b.endsAt),
+              durationMinutes: duration,
+              totalPrice: duration * 4000,
+              status: b.status,
+              cancellationReason: b.cancellationReason || undefined,
+              cancelledBy: b.cancelledById ? (b.cancelledById === user.id ? 'USER' : 'MANAGER') : undefined,
+              createdAt: b.createdAt,
+            };
+          })
+        : [];
+
+      // If user is Owner or Manager, fetch venue bookings and applications
+      const venueBookingsPromises = (user.appointedVenues || []).map(vid =>
+        apiRequest<any[]>(`/venues/${vid}/bookings`).catch(() => [])
+      );
+      const venueBookingsLists = await Promise.all(venueBookingsPromises);
+      const allVenueBookings: Booking[] = [];
+
+      venueBookingsLists.forEach(bList => {
+        if (Array.isArray(bList)) {
+          bList.forEach(b => {
+            const startD = new Date(b.startsAt);
+            const endD = new Date(b.endsAt);
+            const duration = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60));
+            allVenueBookings.push({
+              id: b.id,
+              venueId: b.venueId,
+              venueName: 'Cụm Sân Quản Lý',
+              courtId: b.courtId,
+              courtName: 'Sân con',
+              userId: b.userId,
+              userName: b.customerProfile?.fullName || 'Khách đặt sân',
+              userEmail: b.customerProfile?.email || '',
+              userPhone: b.customerProfile?.phone || '',
+              bookingDate: formatLocalDate(b.startsAt),
+              startTime: formatLocalTime(b.startsAt),
+              endTime: formatLocalTime(b.endsAt),
+              durationMinutes: duration,
+              totalPrice: duration * 4000,
+              status: b.status,
+              cancellationReason: b.cancellationReason || undefined,
+              cancelledBy: b.cancelledById ? (b.cancelledById === b.userId ? 'USER' : 'MANAGER') : undefined,
+              createdAt: b.createdAt,
+            });
+          });
+        }
+      });
+
+      // Merge bookings unique by id
+      const mergedMap = new Map<string, Booking>();
+      [...mappedMyBookings, ...allVenueBookings].forEach(b => mergedMap.set(b.id, b));
+      if (mergedMap.size > 0) {
+        setBookings(Array.from(mergedMap.values()));
+      }
+
+      // If Admin, fetch all accounts
+      if (user.role === 'ADMIN') {
+        const adminAccounts = await apiRequest<any[]>('/admin/accounts').catch(() => []);
+        if (Array.isArray(adminAccounts) && adminAccounts.length > 0) {
+          setAccounts(
+            adminAccounts.map(a => ({
+              id: a.id,
+              name: a.fullName,
+              email: a.email,
+              phone: a.phone,
+              role: a.role,
+              status: a.status,
+              appointedVenues: a.managedVenueIds || [],
+              createdAt: a.createdAt,
+              deletedAt: a.deletedAt || undefined,
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('[PitchSync] Failed to reload user data from Backend:', err);
+    }
+  }, []);
+
+  // Initial Bootstrapping
+  useEffect(() => {
+    reloadVenuesAndCourts();
+
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      apiRequest<any>('/me')
+        .then(account => {
+          const userAccount: Account = {
+            id: account.id,
+            name: account.fullName,
+            email: account.email,
+            phone: account.phone,
+            role: account.role,
+            status: account.status,
+            appointedVenues: account.managedVenueIds || [],
+            createdAt: account.createdAt,
+            deletedAt: account.deletedAt || undefined,
+          };
+          setCurrentUser(userAccount);
+          localStorage.setItem('pitchsync_user', JSON.stringify(userAccount));
+          reloadUserData(userAccount);
+        })
+        .catch(() => {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('pitchsync_user');
+          setCurrentUser(null);
+        });
+    }
+  }, [reloadVenuesAndCourts, reloadUserData]);
 
   // Auth computed status
   const isAuthenticated = Boolean(currentUser && currentUser.status === 'ACTIVE' && !currentUser.deletedAt);
   const isAdmin = Boolean(currentUser && currentUser.role === 'ADMIN');
   const isOwner = Boolean(currentUser && currentUser.role === 'OWNER');
 
-  // Dynamic RBAC: manager status strictly reflects active appointment in DB
-  const isManager = (venueId?: string): boolean => {
+  // Dynamic RBAC: check if user is appointed manager of venue
+  const isManager = useCallback((venueId?: string): boolean => {
     if (!currentUser) return false;
+    const appointed = currentUser.appointedVenues || [];
     if (venueId) {
-      return venues.some(
-        v => v.id === venueId && v.activeManager?.userId === currentUser.id
-      );
+      return appointed.includes(venueId);
     }
-    return venues.some(v => v.activeManager?.userId === currentUser.id);
-  };
+    return appointed.length > 0;
+  }, [currentUser]);
 
-  const isManagerOrOwner = (venueId?: string): boolean => {
+  const isManagerOrOwner = useCallback((venueId?: string): boolean => {
     return isOwner || isManager(venueId);
-  };
+  }, [isOwner, isManager]);
 
   const currentRole: UserRole | 'GUEST' = useMemo(() => {
     if (!currentUser) return 'GUEST';
@@ -241,624 +356,384 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser.role === 'OWNER') return 'OWNER';
     if (isManager()) return 'MANAGER';
     return 'USER';
-  }, [currentUser, venues]);
+  }, [currentUser, isManager]);
 
   // Auth operations
-  const login = (emailOrPhone: string, _password?: string) => {
-    const clean = emailOrPhone.trim().toLowerCase();
-    const account = accounts.find(
-      a => a.email.toLowerCase() === clean || a.phone === emailOrPhone.trim()
-    );
+  const login = async (emailOrPhone: string, password?: string) => {
+    try {
+      const clean = emailOrPhone.trim().toLowerCase();
+      const res = await apiRequest<{ accessToken: string; account: any }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: clean,
+          password: password || 'Secret123@',
+        }),
+      });
 
-    if (!account) {
-      return { success: false, error: 'Email hoặc số điện thoại không tồn tại trong hệ thống.' };
-    }
-
-    if (account.deletedAt || account.status === 'DELETED') {
-      return { success: false, error: 'Tài khoản này đã bị xóa hoặc vô hiệu hóa.' };
-    }
-
-    if (account.status === 'LOCKED') {
-      return {
-        success: false,
-        error: 'Tài khoản của bạn đã bị khóa do vi phạm chính sách hệ thống. Vui lòng liên hệ Quản trị viên.',
+      localStorage.setItem('access_token', res.accessToken);
+      const userAccount: Account = {
+        id: res.account.id,
+        name: res.account.fullName,
+        email: res.account.email,
+        phone: res.account.phone,
+        role: res.account.role,
+        status: res.account.status,
+        appointedVenues: res.account.managedVenueIds || [],
+        createdAt: res.account.createdAt,
+        deletedAt: res.account.deletedAt || undefined,
       };
-    }
 
-    setCurrentUser(account);
-    showToast('success', 'Đăng nhập thành công', `Chào mừng trở lại, ${account.name}!`);
-    return { success: true, account };
+      setCurrentUser(userAccount);
+      localStorage.setItem('pitchsync_user', JSON.stringify(userAccount));
+      await reloadUserData(userAccount);
+      showToast('success', 'Đăng nhập thành công', `Chào mừng trở lại, ${userAccount.name}!`);
+      return { success: true, account: userAccount };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Đăng nhập không thành công.' };
+    }
   };
 
-  const quickLogin = (accountId: string) => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) {
-      showToast('error', 'Lỗi', 'Không tìm thấy tài khoản.');
-      return { success: false, error: 'Tài khoản không tồn tại' };
+  const quickLogin = async (accountIdOrEmail: string) => {
+    let email = accountIdOrEmail;
+    if (accountIdOrEmail === 'ACC-99' || accountIdOrEmail.includes('admin')) {
+      email = 'admin@example.com';
+    } else if (accountIdOrEmail === 'ACC-04' || accountIdOrEmail.includes('owner')) {
+      email = 'owner.anphu@example.com';
+    } else if (accountIdOrEmail === 'ACC-03' || accountIdOrEmail.includes('manager')) {
+      email = 'manager.minh@example.com';
+    } else if (accountIdOrEmail === 'ACC-01' || accountIdOrEmail.includes('user') || accountIdOrEmail.includes('lan')) {
+      email = 'user.lan@example.com';
+    } else if (accountIdOrEmail === 'ACC-05' || accountIdOrEmail.includes('locked')) {
+      email = 'locked.user@example.com';
     }
-
-    if (account.status === 'LOCKED') {
-      showToast('error', 'Tài khoản bị khóa', 'Tài khoản này đang ở trạng thái LOCKED do vi phạm chính sách hệ thống.');
-      return {
-        success: false,
-        error: 'Tài khoản của bạn đã bị khóa do vi phạm chính sách hệ thống. Vui lòng liên hệ Quản trị viên.',
-      };
-    }
-
-    setCurrentUser(account);
-    showToast('success', 'Đăng nhập nhanh', `Đã đăng nhập: ${account.name} (${account.role})`);
-    return { success: true, account };
+    return login(email, 'Secret123@');
   };
 
-  const register = (data: {
+  const register = async (data: {
     name: string;
     email: string;
     phone: string;
     role: 'USER' | 'OWNER';
     password?: string;
   }) => {
-    const cleanEmail = data.email.trim().toLowerCase();
-    const cleanPhone = data.phone.trim();
+    try {
+      const res = await apiRequest<{ accessToken: string; account: any }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          fullName: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          phone: data.phone.trim(),
+          role: data.role,
+          password: data.password || 'Secret123@',
+        }),
+      });
 
-    if (!data.name.trim()) {
-      return { success: false, error: 'Vui lòng nhập họ và tên.' };
+      localStorage.setItem('access_token', res.accessToken);
+      const userAccount: Account = {
+        id: res.account.id,
+        name: res.account.fullName,
+        email: res.account.email,
+        phone: res.account.phone,
+        role: res.account.role,
+        status: res.account.status,
+        appointedVenues: res.account.managedVenueIds || [],
+        createdAt: res.account.createdAt,
+        deletedAt: res.account.deletedAt || undefined,
+      };
+
+      setCurrentUser(userAccount);
+      localStorage.setItem('pitchsync_user', JSON.stringify(userAccount));
+      await reloadUserData(userAccount);
+      showToast('success', 'Đăng ký thành công', `Tài khoản ${userAccount.name} đã được khởi tạo!`);
+      return { success: true, account: userAccount };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Đăng ký không thành công.' };
     }
-
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      return { success: false, error: 'Email không hợp lệ.' };
-    }
-
-    if (!cleanPhone || cleanPhone.length < 9) {
-      return { success: false, error: 'Số điện thoại không hợp lệ (tối thiểu 9 số).' };
-    }
-
-    if (accounts.some(a => a.email.toLowerCase() === cleanEmail)) {
-      return { success: false, error: 'Email này đã được sử dụng bởi tài khoản khác.' };
-    }
-
-    if (accounts.some(a => a.phone === cleanPhone)) {
-      return { success: false, error: 'Số điện thoại này đã được sử dụng bởi tài khoản khác.' };
-    }
-
-    const newAccount: Account = {
-      id: `ACC-${Date.now().toString().slice(-4)}`,
-      name: data.name.trim(),
-      email: cleanEmail,
-      phone: cleanPhone,
-      role: data.role,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-    };
-
-    setAccounts(prev => [...prev, newAccount]);
-    setCurrentUser(newAccount);
-    showToast('success', 'Đăng ký thành công', `Tài khoản ${newAccount.name} đã được khởi tạo!`);
-    return { success: true, account: newAccount };
   };
 
   const logout = () => {
-    setCurrentUser(null);
+    localStorage.removeItem('access_token');
     localStorage.removeItem('pitchsync_user');
+    setCurrentUser(null);
     showToast('info', 'Đã đăng xuất', 'Bạn đã đăng xuất khỏi hệ thống.');
   };
 
-  // Backwards compatibility switchRole
   const switchRole = (role: UserRole) => {
-    let match: Account | undefined;
-    if (role === 'ADMIN') match = accounts.find(a => a.role === 'ADMIN');
-    else if (role === 'OWNER') match = accounts.find(a => a.role === 'OWNER');
-    else if (role === 'MANAGER') match = accounts.find(a => a.appointedVenues && a.appointedVenues.length > 0);
-    else match = accounts.find(a => a.role === 'USER' && (!a.appointedVenues || a.appointedVenues.length === 0));
-
-    if (match) {
-      setCurrentUser(match);
-      showToast('info', 'Chuyển vai trò', `Đang trải nghiệm dưới tài khoản: ${match.name}`);
-    }
+    if (role === 'ADMIN') quickLogin('admin@example.com');
+    else if (role === 'OWNER') quickLogin('owner.anphu@example.com');
+    else if (role === 'MANAGER') quickLogin('manager.minh@example.com');
+    else quickLogin('user.lan@example.com');
   };
 
-  // 1. Book court with domain constraints (start in future, 30m - 4h duration)
-  const bookCourt = (courtId: string, bookingDate: string, startTime: string, endTime: string) => {
-    if (!currentUser) {
-      return { success: false, error: 'Vui lòng đăng nhập để thực hiện đặt sân.' };
-    }
+  // 1. Book Court (Connected to Backend POST /bookings)
+  const bookCourt = async (courtId: string, bookingDate: string, startTime: string, endTime: string) => {
+    try {
+      const startsAt = localDateTimeToISO(bookingDate, startTime);
+      const endsAt = localDateTimeToISO(bookingDate, endTime);
 
-    if (currentUser.status === 'LOCKED') {
-      return { success: false, error: 'Tài khoản của bạn đã bị khóa.' };
-    }
-
-    const court = courts.find(c => c.id === courtId);
-    if (!court) return { success: false, error: 'Sân không tồn tại.' };
-
-    const venue = venues.find(v => v.id === court.venueId);
-    const venueName = venue ? venue.name : 'Cụm Sân Thể Thao';
-
-    const validation = validateBookingTime(bookingDate, startTime, endTime);
-    if (!validation.isValid) {
-      return {
-        success: false,
-        error: validation.error || 'Thời gian đặt sân không hợp lệ.',
-      };
-    }
-    const duration = validation.durationMinutes;
-
-    const price = Math.round((court.hourlyRate * duration) / 60);
-    const newBooking: Booking = {
-      id: `BK-${Date.now().toString().slice(-4)}`,
-      venueId: court.venueId,
-      venueName,
-      courtId: court.id,
-      courtName: court.name,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userEmail: currentUser.email,
-      userPhone: currentUser.phone,
-      bookingDate,
-      startTime,
-      endTime,
-      durationMinutes: duration,
-      totalPrice: price,
-      status: 'CONFIRMED',
-      createdAt: new Date().toISOString(),
-    };
-
-    setBookings(prev => [newBooking, ...prev]);
-
-    // Outbox notification
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: currentUser.id,
-      recipientName: currentUser.name,
-      title: 'Đặt sân thành công',
-      message: `Lượt đặt ${court.name} (${startTime} - ${endTime} ngày ${bookingDate}) tại ${venueName} đã xác nhận.`,
-      type: 'BOOKING_CONFIRMED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast(
-      'success',
-      'Đặt sân thành công',
-      `Bạn đã đặt ${court.name} từ ${startTime} đến ${endTime} ngày ${bookingDate}.`
-    );
-
-    return { success: true };
-  };
-
-  // 2. Customer cancel own booking
-  const cancelMyBooking = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking) return;
-
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? {
-              ...b,
-              status: 'CANCELLED',
-              cancellationReason: 'Khách hàng chủ động hủy qua ứng dụng',
-              cancelledBy: 'USER',
-            }
-          : b
-      )
-    );
-
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: booking.userId,
-      recipientName: booking.userName,
-      title: 'Hủy đặt sân thành công',
-      message: `Bạn đã hủy thành công lượt đặt sân ${booking.courtName} ngày ${booking.bookingDate}.`,
-      type: 'BOOKING_CANCELLED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast('info', 'Đã hủy đặt sân', `Lượt đặt sân ${booking.courtName} đã được hủy.`);
-  };
-
-  // 3. Manager/Owner cancel customer booking with mandatory reason
-  const cancelCustomerBooking = (bookingId: string, reason: string) => {
-    if (!reason || reason.trim().length < 5) {
-      return {
-        success: false,
-        error: 'Lý do hủy là bắt buộc và phải có ít nhất 5 ký tự.',
-      };
-    }
-
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking) return { success: false, error: 'Không tìm thấy thông tin đặt sân.' };
-
-    const cancelledBy = currentUser?.role === 'OWNER' ? 'OWNER' : 'MANAGER';
-
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? {
-              ...b,
-              status: 'CANCELLED',
-              cancellationReason: reason.trim(),
-              cancelledBy,
-            }
-          : b
-      )
-    );
-
-    // Notify affected customer via Outbox
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: booking.userId,
-      recipientName: booking.userName,
-      title: 'Thông báo hủy lịch từ Quản lý sân',
-      message: `Lượt đặt ${booking.courtName} (${booking.startTime} - ${booking.endTime} ngày ${booking.bookingDate}) tại ${booking.venueName} đã bị hủy bởi quản lý. Lý do: "${reason.trim()}"`,
-      type: 'BOOKING_CANCELLED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast(
-      'info',
-      'Đã hủy lịch đặt của khách',
-      `Lượt đặt ${booking.courtName} đã được hủy. Khách hàng đã được gửi thông báo kèm lý do.`
-    );
-
-    return { success: true };
-  };
-
-  // 4. CRUD Court
-  const addCourt = (courtData: Omit<Court, 'id'>) => {
-    const newCourt: Court = {
-      ...courtData,
-      id: `CRT-${Date.now().toString().slice(-4)}`,
-    };
-    setCourts(prev => [...prev, newCourt]);
-
-    // Update court count in venue
-    setVenues(prev =>
-      prev.map(v =>
-        v.id === courtData.venueId
-          ? { ...v, courtsCount: (v.courtsCount || 0) + 1 }
-          : v
-      )
-    );
-
-    showToast('success', 'Thêm sân con thành công', `Sân ${newCourt.name} đã được đưa vào hệ thống.`);
-  };
-
-  const updateCourt = (courtId: string, updatedData: Partial<Court>) => {
-    setCourts(prev =>
-      prev.map(c => (c.id === courtId ? { ...c, ...updatedData } : c))
-    );
-    showToast('success', 'Cập nhật thành công', 'Thông tin sân con đã được lưu.');
-  };
-
-  const deleteCourt = (courtId: string) => {
-    const court = courts.find(c => c.id === courtId);
-    if (!court) return { success: false, message: 'Sân không tồn tại.' };
-
-    const activeCourtBookings = bookings.filter(
-      b => b.courtId === courtId && b.status === 'CONFIRMED'
-    );
-
-    if (activeCourtBookings.length > 0) {
-      return {
-        success: false,
-        message: `Không thể xóa sân này vì hiện có ${activeCourtBookings.length} lịch đặt sân của khách đang hoạt động.`,
-      };
-    }
-
-    setCourts(prev => prev.filter(c => c.id !== courtId));
-    setVenues(prev =>
-      prev.map(v =>
-        v.id === court.venueId
-          ? { ...v, courtsCount: Math.max(0, (v.courtsCount || 1) - 1) }
-          : v
-      )
-    );
-
-    showToast('info', 'Đã xóa sân', `Sân ${court.name} đã được gỡ bỏ khỏi cụm sân.`);
-    return { success: true, message: `Sân ${court.name} đã được xóa thành công.` };
-  };
-
-  // 5. Add Venue
-  const addVenue = (venueData: Omit<Venue, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>) => {
-    if (!currentUser) return;
-    const newVenue: Venue = {
-      ...venueData,
-      id: `VENUE-${Date.now().toString().slice(-4)}`,
-      ownerId: currentUser.id,
-      ownerName: currentUser.name,
-      createdAt: new Date().toISOString(),
-      courtsCount: 0,
-      activeManager: null,
-    };
-    setVenues(prev => [...prev, newVenue]);
-    showToast('success', 'Tạo cụm sân mới', `Cụm sân "${newVenue.name}" đã được tạo.`);
-  };
-
-  // 6. Recruitment toggle
-  const toggleRecruitment = (venueId: string, message?: string) => {
-    setVenues(prev =>
-      prev.map(v => {
-        if (v.id === venueId) {
-          const nextState = !v.isRecruiting;
-          return {
-            ...v,
-            isRecruiting: nextState,
-            recruitmentMessage: nextState ? message || v.recruitmentMessage : undefined,
-          };
-        }
-        return v;
-      })
-    );
-    showToast('info', 'Trạng thái tuyển dụng', 'Đã cập nhật trạng thái tuyển dụng Quản lý cho cụm sân.');
-  };
-
-  // 7. Submit Manager Application
-  const submitManagerApplication = (venueId: string, consented: boolean) => {
-    if (!currentUser) {
-      return { success: false, error: 'Vui lòng đăng nhập để nộp đơn ứng tuyển.' };
-    }
-
-    if (!consented) {
-      return {
-        success: false,
-        error: 'Bạn phải đồng ý với thỏa thuận điều hành trước khi nộp đơn.',
-      };
-    }
-
-    const venue = venues.find(v => v.id === venueId);
-    if (!venue) return { success: false, error: 'Cụm sân không tồn tại.' };
-
-    const existing = applications.find(
-      a => a.venueId === venueId && a.applicantId === currentUser.id
-    );
-
-    if (existing && (existing.status === 'SUBMITTED' || existing.status === 'APPROVED')) {
-      return {
-        success: false,
-        error: 'Bạn đã có đơn ứng tuyển cho cụm sân này đang được xử lý hoặc đã duyệt.',
-      };
-    }
-
-    const newApp: ManagerApplication = {
-      id: `APP-${Date.now().toString().slice(-4)}`,
-      venueId,
-      venueName: venue.name,
-      applicantId: currentUser.id,
-      applicantName: currentUser.name,
-      applicantEmail: currentUser.email,
-      applicantPhone: currentUser.phone,
-      consented: true,
-      status: 'SUBMITTED',
-      appliedAt: new Date().toISOString(),
-    };
-
-    setApplications(prev => [newApp, ...prev]);
-
-    // Send Outbox Notification to Venue Owner
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: venue.ownerId,
-      recipientName: venue.ownerName,
-      title: 'Đơn ứng tuyển Quản lý mới',
-      message: `Ứng viên ${currentUser.name} vừa gửi hồ sơ ứng tuyển tại ${venue.name}.`,
-      type: 'APPLICATION_RECEIVED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast('success', 'Nộp đơn thành công', `Hồ sơ của bạn đã được chuyển tới Chủ sân ${venue.ownerName}.`);
-    return { success: true };
-  };
-
-  // 8. Appoint Manager
-  const appointManager = (venueId: string, application: ManagerApplication) => {
-    const venue = venues.find(v => v.id === venueId);
-    if (!venue) return { success: false, error: 'Không tìm thấy cụm sân.' };
-
-    if (venue.activeManager) {
-      return {
-        success: false,
-        error: `Cụm sân hiện đã có Quản lý (${venue.activeManager.name}). Cần thu hồi quyền trước khi bổ nhiệm người mới.`,
-      };
-    }
-
-    const appointmentId = `APPT-${Date.now().toString().slice(-4)}`;
-
-    // Update venue's active manager
-    setVenues(prev =>
-      prev.map(v =>
-        v.id === venueId
-          ? {
-              ...v,
-              activeManager: {
-                appointmentId,
-                userId: application.applicantId,
-                name: application.applicantName,
-                email: application.applicantEmail,
-                phone: application.applicantPhone,
-                appointedAt: new Date().toLocaleDateString('vi-VN'),
-              },
-            }
-          : v
-      )
-    );
-
-    // Update application status
-    setApplications(prev =>
-      prev.map(a =>
-        a.id === application.id ? { ...a, status: 'APPROVED' } : a
-      )
-    );
-
-    // Update applicant's account appointedVenues
-    setAccounts(prev =>
-      prev.map(acc => {
-        if (acc.id === application.applicantId) {
-          const currentVenues = acc.appointedVenues || [];
-          return {
-            ...acc,
-            appointedVenues: currentVenues.includes(venueId) ? currentVenues : [...currentVenues, venueId],
-          };
-        }
-        return acc;
-      })
-    );
-
-    // If appointed manager is currentUser, update state
-    if (currentUser && currentUser.id === application.applicantId) {
-      const currentVenues = currentUser.appointedVenues || [];
-      setCurrentUser({
-        ...currentUser,
-        appointedVenues: currentVenues.includes(venueId) ? currentVenues : [...currentVenues, venueId],
+      await apiRequest<any>('/bookings', {
+        method: 'POST',
+        body: JSON.stringify({ courtId, startsAt, endsAt }),
       });
+
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Đặt sân thành công!', `Lịch đặt của bạn (${startTime} - ${endTime} ngày ${bookingDate}) đã được xác nhận.`);
+      return { success: true };
+    } catch (err: any) {
+      if (err.status === 409) {
+        return {
+          success: false,
+          error: 'Sân đã có người đặt trong khung giờ này (Race Condition)! Vui lòng chọn khung giờ khác.',
+        };
+      }
+      return { success: false, error: err.message || 'Đặt sân không thành công.' };
     }
-
-    // Outbox notification
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: application.applicantId,
-      recipientName: application.applicantName,
-      title: 'Bổ nhiệm Quản lý sân thành công',
-      message: `Chúc mừng! Bạn đã chính thức được bổ nhiệm làm Quản lý tại cụm sân ${venue.name}.`,
-      type: 'MANAGER_APPOINTED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast('success', 'Bổ nhiệm thành công', `Đã bổ nhiệm ${application.applicantName} làm Quản lý ${venue.name}.`);
-    return { success: true };
   };
 
-  // 9. Revoke Manager
-  const revokeManager = (venueId: string) => {
-    const venue = venues.find(v => v.id === venueId);
-    if (!venue || !venue.activeManager) return;
+  // 2. Customer Cancel Own Booking (POST /bookings/:id/cancel)
+  const cancelMyBooking = async (bookingId: string) => {
+    try {
+      await apiRequest(`/bookings/${bookingId}/cancel`, { method: 'POST' });
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Đã hủy đặt sân', 'Lịch đặt của bạn đã được hủy thành công.');
+    } catch (err: any) {
+      showToast('error', 'Hủy sân thất bại', err.message || 'Không thể hủy lịch.');
+    }
+  };
 
-    const managerUserId = venue.activeManager.userId;
-    const managerName = venue.activeManager.name;
-
-    setVenues(prev =>
-      prev.map(v => (v.id === venueId ? { ...v, activeManager: null } : v))
-    );
-
-    // Update application status to REVOKED
-    setApplications(prev =>
-      prev.map(a =>
-        a.venueId === venueId && a.applicantId === managerUserId && a.status === 'APPROVED'
-          ? { ...a, status: 'REVOKED' }
-          : a
-      )
-    );
-
-    // Remove venueId from manager's appointedVenues
-    setAccounts(prev =>
-      prev.map(acc => {
-        if (acc.id === managerUserId) {
-          return {
-            ...acc,
-            appointedVenues: (acc.appointedVenues || []).filter(id => id !== venueId),
-          };
-        }
-        return acc;
-      })
-    );
-
-    // If currentUser is the revoked manager, update state
-    if (currentUser && currentUser.id === managerUserId) {
-      setCurrentUser({
-        ...currentUser,
-        appointedVenues: (currentUser.appointedVenues || []).filter(id => id !== venueId),
+  // 3. Manager/Owner Cancel Customer Booking (POST /venues/:venueId/bookings/:bookingId/cancel)
+  const cancelCustomerBooking = async (bookingId: string, reason: string) => {
+    try {
+      const target = bookings.find(b => b.id === bookingId);
+      const venueId = target?.venueId || selectedVenueId;
+      await apiRequest(`/venues/${venueId}/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
       });
+
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Đã hủy lịch của khách', `Lý do: "${reason}" đã được ghi nhận vào hệ thống.`);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Không thể hủy lịch của khách.' };
     }
-
-    // Outbox notification
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      recipientId: managerUserId,
-      recipientName: managerName,
-      title: 'Thu hồi quyền Quản lý sân',
-      message: `Quyền Quản lý tại cụm sân ${venue.name} của bạn đã được chủ sân thu hồi.`,
-      type: 'MANAGER_REVOKED',
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    showToast('info', 'Thu hồi thành công', `Đã thu hồi quyền quản lý của ${managerName}.`);
   };
 
-  // 10. Reopen application
-  const reopenApplication = (applicationId: string) => {
-    setApplications(prev =>
-      prev.map(a => (a.id === applicationId ? { ...a, status: 'SUBMITTED' } : a))
-    );
-    showToast('info', 'Mở lại hồ sơ', 'Hồ sơ đã được chuyển lại trạng thái chờ duyệt.');
-  };
-
-  // 11. Add Feedback
-  const addFeedback = (venueId: string, rating: number, comment: string) => {
-    if (!currentUser) {
-      showToast('error', 'Chưa đăng nhập', 'Vui lòng đăng nhập để gửi đánh giá.');
-      return;
+  // 4. Add Court
+  const addCourt = async (courtData: Omit<Court, 'id'>) => {
+    try {
+      await apiRequest(`/venues/${courtData.venueId}/courts`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: courtData.name,
+          description: courtData.description,
+        }),
+      });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Thêm sân con thành công', `Đã thêm ${courtData.name}.`);
+    } catch (err: any) {
+      showToast('error', 'Thêm sân con thất bại', err.message || 'Có lỗi xảy ra.');
     }
-    const newFeedback: Feedback = {
-      id: `FB-${Date.now().toString().slice(-4)}`,
-      venueId,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      rating,
-      comment,
-      createdAt: new Date().toISOString(),
-    };
-    setFeedbacks(prev => [newFeedback, ...prev]);
-    showToast('success', 'Gửi đánh giá thành công', 'Cảm ơn ý kiến đóng góp quý báu của bạn!');
   };
 
-  // 12. Toggle Account Status (Lock/Unlock)
-  const toggleAccountStatus = (accountId: string, newStatus: 'ACTIVE' | 'LOCKED') => {
-    setAccounts(prev =>
-      prev.map(a => (a.id === accountId ? { ...a, status: newStatus } : a))
-    );
+  // 5. Update Court
+  const updateCourt = async (courtId: string, updatedData: Partial<Court>) => {
+    try {
+      await apiRequest(`/courts/${courtId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: updatedData.name,
+          description: updatedData.description,
+        }),
+      });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Cập nhật thành công', 'Thông tin sân con đã được lưu.');
+    } catch (err: any) {
+      showToast('error', 'Cập nhật thất bại', err.message || 'Có lỗi xảy ra.');
+    }
+  };
 
-    if (currentUser?.id === accountId) {
-      if (newStatus === 'LOCKED') {
-        logout();
-        showToast('error', 'Tài khoản bị khóa', 'Tài khoản hiện tại của bạn đã bị khóa do vi phạm chính sách.');
+  // 6. Delete Court
+  const deleteCourt = async (courtId: string) => {
+    try {
+      await apiRequest(`/courts/${courtId}`, { method: 'DELETE' });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Đã xóa sân con', 'Sân con đã được xóa logic.');
+      return { success: true, message: 'Đã xóa sân con' };
+    } catch (err: any) {
+      showToast('error', 'Xóa sân con thất bại', err.message || 'Không thể xóa sân con đang có lịch đặt active.');
+      return { success: false, message: err.message || 'Không thể xóa sân con.' };
+    }
+  };
+
+  // 7. Add Venue
+  const addVenue = async (venueData: Omit<Venue, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>) => {
+    try {
+      await apiRequest('/venues', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: venueData.name,
+          address: venueData.address,
+          description: venueData.description || 'Cụm sân bóng đá cỏ nhân tạo.',
+        }),
+      });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Tạo cụm sân thành công', `Cụm sân "${venueData.name}" đã được tạo.`);
+    } catch (err: any) {
+      showToast('error', 'Tạo cụm sân thất bại', err.message || 'Có lỗi xảy ra.');
+    }
+  };
+
+  // 8. Toggle Recruitment
+  const toggleRecruitment = async (venueId: string, message?: string) => {
+    try {
+      const venue = venues.find(v => v.id === venueId);
+      const isOpen = !venue?.isRecruiting;
+      await apiRequest(`/venues/${venueId}/manager-recruitment`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isOpen,
+          message: message || venue?.recruitmentMessage || 'Đang mở tuyển dụng Quản lý sân.',
+        }),
+      });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Cập nhật tuyển dụng', isOpen ? 'Đã mở chiến dịch tuyển dụng Manager!' : 'Đã đóng chiến dịch tuyển dụng.');
+    } catch (err: any) {
+      showToast('error', 'Cập nhật thất bại', err.message || 'Có lỗi xảy ra.');
+    }
+  };
+
+  // 9. Submit Manager Application
+  const submitManagerApplication = async (venueId: string, consented: boolean) => {
+    try {
+      await apiRequest(`/venues/${venueId}/manager-applications`, {
+        method: 'POST',
+        body: JSON.stringify({ consentToShareContact: consented }),
+      });
+      if (currentUser) {
+        const newApp: ManagerApplication = {
+          id: `app-${Date.now()}`,
+          venueId,
+          venueName: venues.find(v => v.id === venueId)?.name || 'Cụm sân',
+          applicantId: currentUser.id,
+          applicantName: currentUser.name,
+          applicantEmail: currentUser.email,
+          applicantPhone: currentUser.phone,
+          status: 'SUBMITTED',
+          consented,
+          appliedAt: new Date().toISOString(),
+        };
+        setApplications(prev => [newApp, ...prev]);
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Nộp đơn thành công', 'Hồ sơ ứng tuyển của bạn đã được gửi tới Chủ sân!');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Không thể gửi hồ sơ.' };
+    }
+  };
+
+  // 10. Appoint Manager
+  const appointManager = async (venueId: string, application: ManagerApplication) => {
+    try {
+      await apiRequest(`/venues/${venueId}/managers`, {
+        method: 'POST',
+        body: JSON.stringify({ applicationId: application.id }),
+      });
+      await reloadVenuesAndCourts();
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Bổ nhiệm thành công', 'Đã cấp quyền Quản lý sân cho ứng viên.');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Không thể bổ nhiệm ứng viên.' };
+    }
+  };
+
+  // 11. Revoke Manager
+  const revokeManager = async (venueId: string) => {
+    try {
+      const venue = venues.find(v => v.id === venueId);
+      const userId = venue?.activeManager?.userId;
+      if (!userId) {
+        // Fallback to active appointment if not found directly
+        showToast('error', 'Lỗi', 'Không tìm thấy Quản lý đương nhiệm.');
         return;
       }
-      setCurrentUser(prev => (prev ? { ...prev, status: newStatus } : null));
+      await apiRequest(`/venues/${venueId}/managers/${userId}`, { method: 'DELETE' });
+      await reloadVenuesAndCourts();
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Đã thu hồi quyền', 'Quyền Manager tại cụm sân này đã bị thu hồi ngay lập tức.');
+    } catch (err: any) {
+      showToast('error', 'Thu hồi thất bại', err.message || 'Không thể thu hồi quyền.');
     }
-
-    showToast(
-      'info',
-      'Cập nhật trạng thái tài khoản',
-      `Tài khoản đã được chuyển sang trạng thái: ${newStatus}`
-    );
   };
 
-  // 13. Soft delete Account
-  const softDeleteAccount = (accountId: string) => {
-    const now = new Date().toISOString();
-    setAccounts(prev =>
-      prev.map(a =>
-        a.id === accountId ? { ...a, status: 'DELETED', deletedAt: now } : a
-      )
-    );
-
-    if (currentUser?.id === accountId) {
-      logout();
-    }
-
-    showToast('info', 'Xóa mềm tài khoản', 'Tài khoản đã được đánh dấu xóa logic (soft delete).');
+  const reopenApplication = (_applicationId: string) => {
+    showToast('info', 'Thông báo', 'Hồ sơ đã được đánh dấu mở lại để xem xét.');
   };
 
-  // 14. Mark Notification as Read
+  // 12. Add Feedback
+  const addFeedback = async (venueId: string, rating: number, comment: string) => {
+    try {
+      await apiRequest(`/venues/${venueId}/feedback`, {
+        method: 'POST',
+        body: JSON.stringify({ content: comment }),
+      });
+      const newFb: Feedback = {
+        id: `fb-${Date.now()}`,
+        venueId,
+        userId: currentUser?.id || 'anonymous',
+        userName: currentUser?.name || 'Khách hàng',
+        rating,
+        comment,
+        createdAt: new Date().toISOString(),
+      };
+      setFeedbacks(prev => [newFb, ...prev]);
+      showToast('success', 'Gửi góp ý thành công', 'Cảm ơn bạn đã đóng góp ý kiến cho cụm sân!');
+    } catch (err: any) {
+      showToast('error', 'Gửi góp ý thất bại', err.message || 'Có lỗi xảy ra.');
+    }
+  };
+
+  // 13. Admin Toggle Account Status
+  const toggleAccountStatus = async (accountId: string, newStatus: 'ACTIVE' | 'LOCKED') => {
+    try {
+      await apiRequest(`/admin/accounts/${accountId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('info', 'Trạng thái tài khoản', `Đã chuyển tài khoản sang trạng thái ${newStatus}.`);
+    } catch (err: any) {
+      showToast('error', 'Cập nhật thất bại', err.message || 'Không thể thay đổi trạng thái.');
+    }
+  };
+
+  // 14. Admin Soft Delete Account
+  const softDeleteAccount = async (accountId: string) => {
+    try {
+      await apiRequest(`/admin/accounts/${accountId}`, { method: 'DELETE' });
+      if (currentUser) {
+        await reloadUserData(currentUser);
+      }
+      showToast('success', 'Xóa tài khoản thành công', 'Tài khoản đã được xóa logic (deleted_at).');
+    } catch (err: any) {
+      showToast('error', 'Xóa tài khoản thất bại', err.message || 'Không thể xóa tài khoản.');
+    }
+  };
+
   const markNotificationAsRead = (notificationId: string) => {
     setNotifications(prev =>
       prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
