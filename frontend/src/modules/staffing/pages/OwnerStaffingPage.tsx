@@ -65,7 +65,7 @@ export const OwnerStaffingPage: React.FC = () => {
         'Quy tắc PRD & Database:\nThu hồi Manager có hiệu lực ngay lập tức tại CSDL (revoked_at ghi nhận) và chặn toàn bộ quyền quản trị sân con/lịch khách dù token của người này còn hạn.\n\nBạn có chắc chắn muốn thu hồi?'
       )
     ) {
-      await revokeManager(venue.id);
+      await revokeManager(venue.id, venue.activeManager?.userId);
     }
   };
 
@@ -232,14 +232,18 @@ export const OwnerStaffingPage: React.FC = () => {
                     <span className="font-bold text-white text-sm">{app.applicantName}</span>
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        app.status === 'APPROVED'
+                        app.status === 'APPOINTED'
                           ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
                           : app.status === 'REVOKED'
                           ? 'bg-rose-950/60 text-rose-400 border border-rose-800/50'
                           : 'bg-slate-800 text-amber-300'
                       }`}
                     >
-                      {app.status === 'REVOKED' ? 'ĐÃ THU HỒI (REVOKED)' : app.status}
+                      {app.status === 'REVOKED'
+                        ? 'ĐÃ THU HỒI (REVOKED)'
+                        : app.status === 'APPOINTED'
+                        ? 'ĐÃ BỔ NHIỆM (APPOINTED)'
+                        : 'CHỜ DUYỆT (SUBMITTED)'}
                     </span>
                   </div>
 
@@ -259,7 +263,7 @@ export const OwnerStaffingPage: React.FC = () => {
                 </div>
 
                 <div className="shrink-0">
-                  {app.status === 'APPROVED' ? (
+                  {app.status === 'APPOINTED' ? (
                     <span className="text-emerald-400 font-semibold text-xs flex items-center gap-1">
                       <CheckCircle2 className="w-4 h-4" />
                       Đang đảm nhiệm

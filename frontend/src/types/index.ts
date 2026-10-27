@@ -86,7 +86,7 @@ export interface ManagerApplication {
   applicantEmail: string;
   applicantPhone: string;
   consented: boolean;
-  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVOKED';
+  status: 'SUBMITTED' | 'APPOINTED' | 'REVOKED';
   appliedAt: string;
 }
 

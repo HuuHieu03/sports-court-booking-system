@@ -17,6 +17,7 @@ export const ManagerCourtsPage: React.FC = () => {
     currentRole,
     selectedVenueId,
     setSelectedVenueId,
+    isManager,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -43,7 +44,7 @@ export const ManagerCourtsPage: React.FC = () => {
     if (currentUser.role === 'OWNER') {
       return v.ownerId === currentUser.id;
     }
-    return v.activeManager?.userId === currentUser.id;
+    return isManager(v.id) || v.activeManager?.userId === currentUser.id;
   });
 
   useEffect(() => {

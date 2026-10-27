@@ -15,6 +15,7 @@ export const ManagerSchedulePage: React.FC = () => {
     currentRole,
     selectedVenueId,
     setSelectedVenueId,
+    isManager,
   } = useApp();
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [reason, setReason] = useState('');
@@ -36,7 +37,7 @@ export const ManagerSchedulePage: React.FC = () => {
     if (currentUser.role === 'OWNER') {
       return v.ownerId === currentUser.id;
     }
-    return v.activeManager?.userId === currentUser.id;
+    return isManager(v.id) || v.activeManager?.userId === currentUser.id;
   });
 
   useEffect(() => {

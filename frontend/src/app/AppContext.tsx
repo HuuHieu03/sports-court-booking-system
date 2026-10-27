@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Account,
   Venue,
@@ -75,7 +75,7 @@ interface AppContextType {
   toggleRecruitment: (venueId: string, message?: string) => Promise<void>;
   submitManagerApplication: (venueId: string, consented: boolean) => Promise<{ success: boolean; error?: string }>;
   appointManager: (venueId: string, application: ManagerApplication) => Promise<{ success: boolean; error?: string }>;
-  revokeManager: (venueId: string) => Promise<void>;
+  revokeManager: (venueId: string, targetUserId?: string) => Promise<void>;
   reopenApplication: (applicationId: string) => void;
   addFeedback: (venueId: string, rating: number, comment: string) => Promise<void>;
   toggleAccountStatus: (accountId: string, newStatus: 'ACTIVE' | 'LOCKED') => Promise<void>;
@@ -117,6 +117,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
 
+  const venuesRef = useRef<Venue[]>(venues);
+  const courtsRef = useRef<Court[]>(courts);
+  useEffect(() => {
+    venuesRef.current = venues;
+  }, [venues]);
+  useEffect(() => {
+    courtsRef.current = courts;
+  }, [courts]);
+
   const [currentUser, setCurrentUser] = useState<Account | null>(() => {
     const saved = localStorage.getItem('pitchsync_user');
     if (saved) {
@@ -149,31 +158,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const reloadVenuesAndCourts = useCallback(async () => {
     try {
       const backendVenues = await apiRequest<any[]>('/venues');
-      if (Array.isArray(backendVenues) && backendVenues.length > 0) {
-        const mappedVenues: Venue[] = backendVenues.map(v => ({
-          id: v.id,
-          name: v.name,
-          address: v.address,
-          description: v.description || '',
-          ownerId: v.ownerId,
-          ownerName: 'Chủ sân ' + v.name.replace(/^Sân bóng\s*/i, ''),
-          isRecruiting: v.recruitmentOpen ?? v.managerRecruitment?.isOpen ?? false,
-          recruitmentMessage: v.recruitmentMessage ?? v.managerRecruitment?.message ?? '',
-          createdAt: v.createdAt,
-          courtsCount: v.courtCount || 0,
-          activeManager: null,
-        }));
+      if (Array.isArray(backendVenues)) {
+        setVenues(prev => {
+          const activeManagerMap = new Map<string, any>();
+          prev.forEach(v => {
+            if (v.activeManager) activeManagerMap.set(v.id, v.activeManager);
+          });
 
-        setVenues(mappedVenues);
+          return backendVenues.map(v => ({
+            id: v.id,
+            name: v.name,
+            address: v.address,
+            description: v.description || '',
+            ownerId: v.ownerId,
+            ownerName: 'Chủ sân ' + v.name.replace(/^Sân bóng\s*/i, ''),
+            isRecruiting: v.recruitmentOpen ?? v.managerRecruitment?.isOpen ?? false,
+            recruitmentMessage: v.recruitmentMessage ?? v.managerRecruitment?.message ?? '',
+            createdAt: v.createdAt,
+            courtsCount: v.courtCount || 0,
+            activeManager: activeManagerMap.get(v.id) || null,
+          }));
+        });
 
         // Fetch courts for each venue
-        const courtPromises = mappedVenues.map(v =>
+        const courtPromises = backendVenues.map(v =>
           apiRequest<any[]>(`/venues/${v.id}/courts`).catch(() => [])
         );
         const courtResults = await Promise.all(courtPromises);
         const allCourts: Court[] = [];
 
-        courtResults.forEach((courtsList) => {
+        courtResults.forEach(courtsList => {
           if (Array.isArray(courtsList)) {
             courtsList.forEach(c => {
               allCourts.push({
@@ -209,12 +223,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const startD = new Date(b.startsAt);
             const endD = new Date(b.endsAt);
             const duration = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60));
+            const foundVenue = venuesRef.current.find(v => v.id === b.venueId);
+            const foundCourt = courtsRef.current.find(c => c.id === b.courtId);
             return {
               id: b.id,
               venueId: b.venueId,
-              venueName: 'Cụm Sân Bóng',
+              venueName: foundVenue?.name || 'Cụm Sân Bóng',
               courtId: b.courtId,
-              courtName: 'Sân con',
+              courtName: foundCourt?.name || 'Sân con',
               userId: b.userId,
               userName: user.name,
               userEmail: user.email,
@@ -232,8 +248,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           })
         : [];
 
-      // If user is Owner or Manager, fetch venue bookings and applications
-      const venueBookingsPromises = (user.appointedVenues || []).map(vid =>
+      // Determine venue IDs to load bookings, applications, and managers for:
+      // Point 5: Owner must load bookings for owned venues (user.appointedVenues is empty for Owner)
+      const ownedVenueIds: string[] = [];
+      if (user.role === 'OWNER') {
+        const myVenues = await apiRequest<any[]>('/me/venues').catch(() => []);
+        if (Array.isArray(myVenues) && myVenues.length > 0) {
+          myVenues.forEach((v: any) => {
+            if (v && v.id) ownedVenueIds.push(v.id);
+          });
+        } else {
+          // Fallback to locally loaded owned venues
+          venuesRef.current
+            .filter(v => v.ownerId === user.id)
+            .forEach(v => ownedVenueIds.push(v.id));
+        }
+      }
+
+      // Relevant venues: manager appointed venues + owner owned venues
+      const relevantVenueIds = Array.from(
+        new Set([...(user.appointedVenues || []), ...ownedVenueIds])
+      );
+
+      // Fetch bookings for all relevant venues
+      const venueBookingsPromises = relevantVenueIds.map(vid =>
         apiRequest<any[]>(`/venues/${vid}/bookings`).catch(() => [])
       );
       const venueBookingsLists = await Promise.all(venueBookingsPromises);
@@ -245,12 +283,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const startD = new Date(b.startsAt);
             const endD = new Date(b.endsAt);
             const duration = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60));
+            const foundVenue = venuesRef.current.find(v => v.id === b.venueId);
+            const foundCourt = courtsRef.current.find(c => c.id === b.courtId);
             allVenueBookings.push({
               id: b.id,
               venueId: b.venueId,
-              venueName: 'Cụm Sân Quản Lý',
+              venueName: foundVenue?.name || 'Cụm Sân Quản Lý',
               courtId: b.courtId,
-              courtName: 'Sân con',
+              courtName: foundCourt?.name || 'Sân con',
               userId: b.userId,
               userName: b.customerProfile?.fullName || 'Khách đặt sân',
               userEmail: b.customerProfile?.email || '',
@@ -274,6 +314,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [...mappedMyBookings, ...allVenueBookings].forEach(b => mergedMap.set(b.id, b));
       if (mergedMap.size > 0) {
         setBookings(Array.from(mergedMap.values()));
+      }
+
+      // Point 3: Fetch real manager applications from Backend API for Owner
+      if (user.role === 'OWNER' && ownedVenueIds.length > 0) {
+        const appsPromises = ownedVenueIds.map(vid =>
+          apiRequest<any[]>(`/venues/${vid}/manager-applications`).catch(() => [])
+        );
+        const appsLists = await Promise.all(appsPromises);
+        const allFetchedApps: ManagerApplication[] = [];
+
+        appsLists.forEach(appList => {
+          if (Array.isArray(appList)) {
+            appList.forEach((item: any) => {
+              const app = item.application || item;
+              const contact = item.contact || {};
+              const foundVenue = venuesRef.current.find(v => v.id === app.venueId);
+              allFetchedApps.push({
+                id: app.id,
+                venueId: app.venueId,
+                venueName: foundVenue?.name || 'Cụm sân',
+                applicantId: app.applicantId,
+                applicantName: contact.fullName || 'Ứng viên',
+                applicantEmail: contact.email || '',
+                applicantPhone: contact.phone || '',
+                consented: app.consentToShareContact ?? true,
+                status: app.status as 'SUBMITTED' | 'APPOINTED' | 'REVOKED',
+                appliedAt: app.createdAt || app.consentedAt || new Date().toISOString(),
+              });
+            });
+          }
+        });
+
+        if (allFetchedApps.length > 0) {
+          setApplications(prev => {
+            const appMap = new Map<string, ManagerApplication>();
+            prev.forEach(a => appMap.set(a.id, a));
+            allFetchedApps.forEach(a => appMap.set(a.id, a));
+            return Array.from(appMap.values());
+          });
+        }
+      }
+
+      // Fetch active manager for relevant venues to populate activeManager on venues
+      if (relevantVenueIds.length > 0) {
+        const managerPromises = relevantVenueIds.map(vid =>
+          apiRequest<any[]>(`/venues/${vid}/managers`)
+            .then(mgrs => ({ vid, mgrs }))
+            .catch(() => ({ vid, mgrs: [] }))
+        );
+        const managerResults = await Promise.all(managerPromises);
+        const venueManagerMap = new Map<string, any>();
+
+        managerResults.forEach(({ vid, mgrs }) => {
+          if (Array.isArray(mgrs)) {
+            const active = mgrs.find((m: any) => !m.appointment.revokedAt);
+            if (active) {
+              venueManagerMap.set(vid, {
+                appointmentId: active.appointment.id,
+                userId: active.appointment.userId,
+                name: active.profile?.fullName || 'Quản lý sân',
+                email: active.profile?.email || '',
+                phone: active.profile?.phone || '',
+                appointedAt: formatLocalDate(active.appointment.appointedAt),
+              });
+            }
+          }
+        });
+
+        setVenues(prev =>
+          prev.map(v => {
+            if (relevantVenueIds.includes(v.id)) {
+              return {
+                ...v,
+                activeManager: venueManagerMap.get(v.id) || null,
+              };
+            }
+            return v;
+          })
+        );
       }
 
       // If Admin, fetch all accounts
@@ -395,16 +514,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const quickLogin = async (accountIdOrEmail: string) => {
     let email = accountIdOrEmail;
-    if (accountIdOrEmail === 'ACC-99' || accountIdOrEmail.includes('admin')) {
+    if (accountIdOrEmail === 'ACC-99' || accountIdOrEmail.includes('admin') || accountIdOrEmail.includes('1001')) {
       email = 'admin@example.com';
-    } else if (accountIdOrEmail === 'ACC-04' || accountIdOrEmail.includes('owner')) {
+    } else if (accountIdOrEmail === 'ACC-04' || accountIdOrEmail.includes('owner.anphu') || accountIdOrEmail.includes('1002')) {
       email = 'owner.anphu@example.com';
-    } else if (accountIdOrEmail === 'ACC-03' || accountIdOrEmail.includes('manager')) {
+    } else if (accountIdOrEmail.includes('owner.thuduc') || accountIdOrEmail.includes('1003')) {
+      email = 'owner.thuduc@example.com';
+    } else if (accountIdOrEmail.includes('owner')) {
+      email = 'owner.anphu@example.com';
+    } else if (accountIdOrEmail === 'ACC-03' || accountIdOrEmail.includes('manager') || accountIdOrEmail.includes('1004')) {
       email = 'manager.minh@example.com';
-    } else if (accountIdOrEmail === 'ACC-01' || accountIdOrEmail.includes('user') || accountIdOrEmail.includes('lan')) {
+    } else if (accountIdOrEmail === 'ACC-01' || accountIdOrEmail.includes('lan') || accountIdOrEmail.includes('1005')) {
       email = 'user.lan@example.com';
-    } else if (accountIdOrEmail === 'ACC-05' || accountIdOrEmail.includes('locked')) {
-      email = 'locked.user@example.com';
+    } else if (accountIdOrEmail === 'ACC-02' || accountIdOrEmail.includes('huy') || accountIdOrEmail.includes('1006')) {
+      email = 'user.huy@example.com';
+    } else if (accountIdOrEmail === 'ACC-05' || accountIdOrEmail.includes('locked') || accountIdOrEmail.includes('1007')) {
+      email = 'user.locked@example.com';
     }
     return login(email, 'Secret123@');
   };
@@ -612,13 +737,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 9. Submit Manager Application
   const submitManagerApplication = async (venueId: string, consented: boolean) => {
     try {
-      await apiRequest(`/venues/${venueId}/manager-applications`, {
+      const res = await apiRequest<any>(`/venues/${venueId}/manager-applications`, {
         method: 'POST',
         body: JSON.stringify({ consentToShareContact: consented }),
       });
       if (currentUser) {
         const newApp: ManagerApplication = {
-          id: `app-${Date.now()}`,
+          id: res?.id || `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, '0')}`,
           venueId,
           venueName: venues.find(v => v.id === venueId)?.name || 'Cụm sân',
           applicantId: currentUser.id,
@@ -627,9 +752,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           applicantPhone: currentUser.phone,
           status: 'SUBMITTED',
           consented,
-          appliedAt: new Date().toISOString(),
+          appliedAt: res?.createdAt || new Date().toISOString(),
         };
-        setApplications(prev => [newApp, ...prev]);
+        setApplications(prev => [newApp, ...prev.filter(a => !(a.venueId === venueId && a.applicantId === currentUser.id))]);
         await reloadUserData(currentUser);
       }
       showToast('success', 'Nộp đơn thành công', 'Hồ sơ ứng tuyển của bạn đã được gửi tới Chủ sân!');
@@ -642,10 +767,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 10. Appoint Manager
   const appointManager = async (venueId: string, application: ManagerApplication) => {
     try {
-      await apiRequest(`/venues/${venueId}/managers`, {
+      const res = await apiRequest<any>(`/venues/${venueId}/managers`, {
         method: 'POST',
         body: JSON.stringify({ applicationId: application.id }),
       });
+
+      // 1. Immediately update applications state: mark this app APPOINTED
+      setApplications(prev =>
+        prev.map(app =>
+          app.id === application.id
+            ? { ...app, status: 'APPOINTED' }
+            : app.venueId === venueId && app.status === 'APPOINTED'
+            ? { ...app, status: 'REVOKED' }
+            : app
+        )
+      );
+
+      // 2. Immediately update venues state: set activeManager
+      setVenues(prev =>
+        prev.map(v => {
+          if (v.id === venueId) {
+            return {
+              ...v,
+              activeManager: {
+                appointmentId: res?.id || `appt-${Date.now()}`,
+                userId: application.applicantId,
+                name: application.applicantName,
+                email: application.applicantEmail,
+                phone: application.applicantPhone,
+                appointedAt: formatLocalDate(new Date().toISOString()),
+              },
+            };
+          }
+          return v;
+        })
+      );
+
+      // 3. If current user was appointed as manager, update appointedVenues
+      if (currentUser && currentUser.id === application.applicantId) {
+        const appointed = currentUser.appointedVenues || [];
+        if (!appointed.includes(venueId)) {
+          const updatedUser = { ...currentUser, appointedVenues: [...appointed, venueId] };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('pitchsync_user', JSON.stringify(updatedUser));
+        }
+      }
+
       await reloadVenuesAndCourts();
       if (currentUser) {
         await reloadUserData(currentUser);
@@ -658,16 +825,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // 11. Revoke Manager
-  const revokeManager = async (venueId: string) => {
+  const revokeManager = async (venueId: string, targetUserId?: string) => {
     try {
-      const venue = venues.find(v => v.id === venueId);
-      const userId = venue?.activeManager?.userId;
+      let userId = targetUserId;
       if (!userId) {
-        // Fallback to active appointment if not found directly
+        const venue = venues.find(v => v.id === venueId);
+        userId = venue?.activeManager?.userId;
+      }
+      if (!userId) {
+        // Fallback to active appointment from backend
+        const managers = await apiRequest<any[]>(`/venues/${venueId}/managers`).catch(() => []);
+        if (Array.isArray(managers)) {
+          const active = managers.find((m: any) => !m.appointment.revokedAt);
+          if (active) {
+            userId = active.appointment.userId;
+          }
+        }
+      }
+      if (!userId) {
         showToast('error', 'Lỗi', 'Không tìm thấy Quản lý đương nhiệm.');
         return;
       }
+
       await apiRequest(`/venues/${venueId}/managers/${userId}`, { method: 'DELETE' });
+
+      // 1. Immediately update venues state: remove activeManager
+      setVenues(prev =>
+        prev.map(v => (v.id === venueId ? { ...v, activeManager: null } : v))
+      );
+
+      // 2. Immediately update applications state: mark APPOINTED -> REVOKED
+      setApplications(prev =>
+        prev.map(app =>
+          app.venueId === venueId && app.status === 'APPOINTED'
+            ? { ...app, status: 'REVOKED' }
+            : app
+        )
+      );
+
+      // 3. If current user was revoked, update appointedVenues
+      if (currentUser && currentUser.id === userId) {
+        const updatedAppointed = (currentUser.appointedVenues || []).filter(id => id !== venueId);
+        const updatedUser = { ...currentUser, appointedVenues: updatedAppointed };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('pitchsync_user', JSON.stringify(updatedUser));
+      }
+
       await reloadVenuesAndCourts();
       if (currentUser) {
         await reloadUserData(currentUser);
@@ -678,7 +881,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const reopenApplication = (_applicationId: string) => {
+  const reopenApplication = (applicationId: string) => {
+    setApplications(prev =>
+      prev.map(a => (a.id === applicationId ? { ...a, status: 'SUBMITTED' } : a))
+    );
     showToast('info', 'Thông báo', 'Hồ sơ đã được đánh dấu mở lại để xem xét.');
   };
 
