@@ -56,6 +56,7 @@ erDiagram
     uuid venue_id FK
     varchar(200) name
     varchar(2000) description "nullable"
+    int hourly_rate "đơn giá theo giờ (VND), >= 0"
     timestamptz created_at
     timestamptz updated_at
     timestamptz deleted_at "xóa logic"
@@ -67,6 +68,7 @@ erDiagram
     uuid user_id FK "người đặt"
     timestamptz starts_at
     timestamptz ends_at
+    int total_price "tổng tiền thuê (VND), >= 0"
     booking_status status "CONFIRMED / CANCELLED"
     timestamptz cancelled_at "nullable"
     uuid cancelled_by_id FK "nullable"
@@ -102,7 +104,7 @@ erDiagram
     uuid id PK
     uuid recipient_id FK
     uuid booking_id FK "nullable"
-    notification_type type
+    notification_type type "BOOKING_CANCELLED_BY_VENUE / MANAGER_APPOINTED / BOOKING_CONFIRMED"
     notification_status status "PENDING / SENT / FAILED"
     int attempt_count
     text last_error "nullable"
@@ -117,7 +119,7 @@ erDiagram
 - Thời gian dùng `timestamptz`.
 - Độ dài `varchar` khớp `maxLength` trong OpenAPI.
 - Mọi FK dùng `ON DELETE RESTRICT`. Account, Venue và Court chỉ xóa logic nên lịch sử booking, bổ nhiệm và feedback luôn còn tham chiếu.
-- Enum `account_role`, `account_status`, `booking_status`, `application_status` dùng đúng giá trị trong OpenAPI. `notification_type` hiện chỉ có `BOOKING_CANCELLED_BY_VENUE`.
+- Enum `account_role`, `account_status`, `booking_status`, `application_status` dùng đúng giá trị trong OpenAPI. Enum `notification_type` gồm `BOOKING_CANCELLED_BY_VENUE`, `MANAGER_APPOINTED`, `BOOKING_CONFIRMED`.
 
 ## Tài khoản
 
@@ -149,7 +151,9 @@ Email và số điện thoại không được dùng lại, kể cả khi tài k
 | venues | index `(owner_id) WHERE deleted_at IS NULL` | Venue của Owner, kiểm tra quyền sở hữu |
 | courts | `UNIQUE(id, venue_id)` | Đích của FK kép từ `bookings` |
 | courts | index `(venue_id) WHERE deleted_at IS NULL` | Danh sách Court của Venue |
+| courts | `CHECK(hourly_rate >= 0)` | Đơn giá thuê mỗi giờ không được âm |
 | bookings | `FOREIGN KEY (court_id, venue_id) REFERENCES courts(id, venue_id)` | `venue_id` luôn đúng Venue của Court |
+| bookings | `CHECK(total_price >= 0)` | Tổng tiền thuê sân không được âm |
 | bookings | `CHECK(ends_at > starts_at)` | Giờ kết thúc sau giờ bắt đầu |
 | bookings | `CHECK(ends_at - starts_at >= INTERVAL '30 minutes' AND ends_at - starts_at <= INTERVAL '4 hours')` | Thời lượng mỗi lượt đặt từ 30 phút đến 4 giờ |
 | bookings | `CONFIRMED`: `cancelled_at`, `cancelled_by_id`, `cancellation_reason` đều NULL. `CANCELLED`: `cancelled_at`, `cancelled_by_id` NOT NULL | Trạng thái và dữ liệu hủy nhất quán |
@@ -222,6 +226,7 @@ Các quy tắc sau không thể hiện bằng ràng buộc schema và do Service
 | `prisma/schema.prisma` | Model, enum, FK và index, gồm cả partial index |
 | `prisma/migrations/20261018000000_baseline/` | Migration baseline: bảng, index và CHECK constraint |
 | `prisma/migrations/20261025143000_add_booking_duration_check/` | Migration bổ sung CHECK constraint thời lượng đặt sân (30 phút - 4 giờ) |
+| `prisma/migrations/20261028160000_add_pricing_and_notification_types/` | Migration bổ sung đơn giá `courts.hourly_rate`, tổng tiền `bookings.total_price`, CHECK constraint giá và enum `notification_type` mới (`MANAGER_APPOINTED`, `BOOKING_CONFIRMED`) |
 | `prisma/seed.ts` | Dữ liệu mẫu, chạy lại nhiều lần không tạo bản ghi trùng |
 | `prisma.config.ts` | Cấu hình Prisma CLI: đường dẫn schema, migration, lệnh seed và `DATABASE_URL` |
 | `docker-compose.yml` | Service `postgres` (PostgreSQL 17) và `db-init` cho môi trường local |

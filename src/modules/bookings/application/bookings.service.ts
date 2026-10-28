@@ -88,6 +88,8 @@ export class BookingsService {
     // HOOK-01 Artificial delay window to expose the race condition
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    const totalPrice = Math.round((court.hourlyRate * durationMinutes) / 60);
+
     // HOOK-01 Act step: Save booking without concurrency barrier
     const booking = new BookingEntity({
       id: crypto.randomUUID ? crypto.randomUUID() : `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, '0')}`,
@@ -96,6 +98,7 @@ export class BookingsService {
       userId,
       startsAt,
       endsAt,
+      totalPrice,
       status: 'CONFIRMED',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -195,6 +198,7 @@ export class BookingsService {
       userId: booking.userId,
       startsAt: booking.startsAt.toISOString(),
       endsAt: booking.endsAt.toISOString(),
+      totalPrice: booking.totalPrice,
       status: booking.status,
       createdAt: booking.createdAt.toISOString(),
       cancelledAt: booking.cancelledAt ? booking.cancelledAt.toISOString() : null,

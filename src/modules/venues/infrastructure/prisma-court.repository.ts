@@ -14,6 +14,7 @@ export class PrismaCourtRepository implements ICourtRepository {
       venueId: raw.venueId,
       name: raw.name,
       description: raw.description,
+      hourlyRate: raw.hourlyRate,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
       deletedAt: raw.deletedAt,
@@ -45,6 +46,7 @@ export class PrismaCourtRepository implements ICourtRepository {
         venueId: court.venueId,
         name: court.name,
         description: court.description,
+        hourlyRate: court.hourlyRate,
         createdAt: court.createdAt,
         updatedAt: court.updatedAt,
         deletedAt: court.deletedAt,
@@ -59,6 +61,7 @@ export class PrismaCourtRepository implements ICourtRepository {
       data: {
         name: court.name,
         description: court.description,
+        hourlyRate: court.hourlyRate,
         updatedAt: court.updatedAt,
         deletedAt: court.deletedAt,
       },

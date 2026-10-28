@@ -7,6 +7,7 @@ export interface BookingProps {
   userId: string;
   startsAt: Date;
   endsAt: Date;
+  totalPrice?: number;
   status: BookingStatus;
   cancelledAt?: Date | null;
   cancelledById?: string | null;
@@ -22,6 +23,7 @@ export class BookingEntity {
   public readonly userId: string;
   public readonly startsAt: Date;
   public readonly endsAt: Date;
+  public readonly totalPrice: number;
   public status: BookingStatus;
   public cancelledAt: Date | null;
   public cancelledById: string | null;
@@ -36,6 +38,7 @@ export class BookingEntity {
     this.userId = props.userId;
     this.startsAt = props.startsAt;
     this.endsAt = props.endsAt;
+    this.totalPrice = props.totalPrice ?? 0;
     this.status = props.status;
     this.cancelledAt = props.cancelledAt ?? null;
     this.cancelledById = props.cancelledById ?? null;

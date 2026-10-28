@@ -78,4 +78,32 @@ describe('Booking Business Rules', () => {
       }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('should calculate totalPrice accurately for 1 hour booking based on court hourly rate', async () => {
+    const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour
+
+    const booking = await bookingsService.createBooking('user-1', {
+      courtId,
+      startsAt: start.toISOString(),
+      endsAt: end.toISOString(),
+    });
+
+    // court 3001 has hourlyRate 250000
+    expect(booking.totalPrice).toBe(250000);
+  });
+
+  it('should calculate proportional totalPrice accurately for 90-minute booking', async () => {
+    const start = new Date(Date.now() + 26 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 90 * 60 * 1000); // 1.5 hours
+
+    const booking = await bookingsService.createBooking('user-1', {
+      courtId,
+      startsAt: start.toISOString(),
+      endsAt: end.toISOString(),
+    });
+
+    // 250000 * 90 / 60 = 375000
+    expect(booking.totalPrice).toBe(375000);
+  });
 });

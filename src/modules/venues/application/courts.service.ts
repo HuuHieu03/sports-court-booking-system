@@ -15,11 +15,13 @@ import { BookingsService } from '../../bookings/application/bookings.service';
 export interface CreateCourtInput {
   name: string;
   description?: string;
+  hourlyRate?: number;
 }
 
 export interface UpdateCourtInput {
   name?: string;
   description?: string;
+  hourlyRate?: number;
 }
 
 @Injectable()
@@ -56,6 +58,7 @@ export class CourtsService {
       venueId,
       name: input.name.trim(),
       description: input.description?.trim() || null,
+      hourlyRate: input.hourlyRate ?? 300000,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -71,6 +74,7 @@ export class CourtsService {
 
     if (input.name !== undefined) court.name = input.name.trim();
     if (input.description !== undefined) court.description = input.description.trim() || null;
+    if (input.hourlyRate !== undefined) court.hourlyRate = input.hourlyRate;
     court.updatedAt = new Date();
 
     return this.courtRepository.update(court);
