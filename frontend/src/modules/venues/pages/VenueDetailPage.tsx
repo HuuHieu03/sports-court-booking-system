@@ -48,6 +48,7 @@ export const VenueDetailPage: React.FC = () => {
     submitManagerApplication,
     currentUser,
     isAuthenticated,
+    isManager,
     showToast,
   } = useApp();
 
@@ -116,7 +117,7 @@ export const VenueDetailPage: React.FC = () => {
           showToast('warning', 'Thông báo', 'Cụm sân này hiện không có nhu cầu tuyển dụng Quản lý.');
         } else if (myApp?.status === 'SUBMITTED') {
           showToast('info', 'Thông báo', 'Bạn đã nộp hồ sơ ứng tuyển cụm sân này và đang chờ duyệt.');
-        } else if (myApp?.status === 'APPROVED') {
+        } else if (myApp?.status === 'APPOINTED' || (venue ? isManager(venue.id) : false)) {
           showToast('info', 'Thông báo', 'Bạn hiện đang là Quản lý của cụm sân này.');
         } else {
           setIsApplyModalOpen(true);
@@ -377,7 +378,7 @@ export const VenueDetailPage: React.FC = () => {
                 <Clock className="w-4 h-4" />
                 Đã nộp đơn (Chờ duyệt)
               </span>
-            ) : myApp?.status === 'APPROVED' ? (
+            ) : myApp?.status === 'APPOINTED' || (venue ? isManager(venue.id) : false) ? (
               <span className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 font-semibold text-xs">
                 <CheckCircle2 className="w-4 h-4" />
                 Đang là Quản lý

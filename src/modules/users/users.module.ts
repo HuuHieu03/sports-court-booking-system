@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MeController } from './presentation/me.controller';
 import { AdminAccountsController } from './presentation/admin-accounts.controller';
 import { UsersService } from './application/users.service';
-import { InMemoryAccountRepository } from './infrastructure/in-memory-account.repository';
+import { PrismaAccountRepository } from './infrastructure/prisma-account.repository';
 import { ACCOUNT_REPOSITORY } from '../../common/constants/tokens';
 import { StaffingModule } from '../staffing/staffing.module';
 
@@ -20,7 +20,7 @@ import { StaffingModule } from '../staffing/staffing.module';
     UsersService,
     {
       provide: ACCOUNT_REPOSITORY,
-      useClass: InMemoryAccountRepository,
+      useClass: PrismaAccountRepository,
     },
   ],
   exports: [UsersService, JwtModule],

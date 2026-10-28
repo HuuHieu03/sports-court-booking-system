@@ -86,7 +86,7 @@ export interface ManagerApplication {
   applicantEmail: string;
   applicantPhone: string;
   consented: boolean;
-  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVOKED';
+  status: 'SUBMITTED' | 'APPOINTED' | 'REVOKED';
   appliedAt: string;
 }
 
@@ -103,6 +103,7 @@ export interface Feedback {
 export type NotificationType =
   | 'BOOKING_CONFIRMED'
   | 'BOOKING_CANCELLED'
+  | 'BOOKING_CANCELLED_BY_VENUE'
   | 'MANAGER_APPOINTED'
   | 'MANAGER_REVOKED'
   | 'APPLICATION_RECEIVED';

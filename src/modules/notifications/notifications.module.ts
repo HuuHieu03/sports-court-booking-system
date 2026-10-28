@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationsService } from './application/notifications.service';
-import { InMemoryNotificationRepository } from './infrastructure/in-memory-notification.repository';
+import { PrismaNotificationRepository } from './infrastructure/prisma-notification.repository';
 import { NOTIFICATION_REPOSITORY } from '../../common/constants/tokens';
 
 @Module({
@@ -8,7 +8,7 @@ import { NOTIFICATION_REPOSITORY } from '../../common/constants/tokens';
     NotificationsService,
     {
       provide: NOTIFICATION_REPOSITORY,
-      useClass: InMemoryNotificationRepository,
+      useClass: PrismaNotificationRepository,
     },
   ],
   exports: [NotificationsService],

@@ -3,7 +3,7 @@ import { BookingsController } from './presentation/bookings.controller';
 import { MyBookingsController } from './presentation/my-bookings.controller';
 import { VenueBookingsController } from './presentation/venue-bookings.controller';
 import { BookingsService } from './application/bookings.service';
-import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
+import { PrismaBookingRepository } from './infrastructure/prisma-booking.repository';
 import { BOOKING_REPOSITORY } from '../../common/constants/tokens';
 import { UsersModule } from '../users/users.module';
 import { VenuesModule } from '../venues/venues.module';
@@ -26,7 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     BookingsService,
     {
       provide: BOOKING_REPOSITORY,
-      useClass: InMemoryBookingRepository,
+      useClass: PrismaBookingRepository,
     },
   ],
   exports: [
