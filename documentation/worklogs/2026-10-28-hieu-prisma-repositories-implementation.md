@@ -41,4 +41,6 @@ Nhánh hoặc commit: `hieu`
 ## Vướng mắc và việc tiếp theo
 
 - Đã hoàn thành 100% việc chuyển đổi toàn bộ 6 module sang CSDL PostgreSQL thật.
-- Tiếp tục tiến hành đóng gói Dockerfile cho BE/FE và xây dựng kịch bản benchmark tải k6.
+- Đã đóng gói thành công file `Dockerfile` chung (multi-target cho cả NestJS backend và React Vite frontend NGINX) cùng `docker/nginx.conf`.
+- Đã khắc phục lỗi khởi động NGINX trong Docker container (`host not found in upstream "backend"`) bằng cách cấu hình dynamic resolver (`resolver 127.0.0.11 valid=10s ipv6=off;`) kết hợp biến `$backend_api` trong `docker/nginx.conf`.
+- Tiếp tục tiến hành triển khai lên môi trường VM và xây dựng kịch bản benchmark tải k6.
