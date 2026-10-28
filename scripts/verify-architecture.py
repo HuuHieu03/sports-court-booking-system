@@ -41,6 +41,8 @@ for hook, (fpath, kw) in hooks.items():
 # 4. Verify relative import paths
 ts_files = []
 for root, dirs, files in os.walk('src'):
+    if 'generated' in root:
+        continue
     for f in files:
         if f.endswith('.ts'):
             ts_files.append(os.path.join(root, f))
