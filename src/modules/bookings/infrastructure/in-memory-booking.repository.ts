@@ -40,6 +40,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1005), // Lan
         startsAt: vnTime(1, 18),
         endsAt: vnTime(1, 19),
+        totalPrice: 250000,
         status: 'CONFIRMED',
         createdAt: daysAgo(2),
         updatedAt: daysAgo(2),
@@ -51,6 +52,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1006), // Huy
         startsAt: vnTime(1, 19),
         endsAt: vnTime(1, 20),
+        totalPrice: 250000,
         status: 'CONFIRMED',
         createdAt: daysAgo(2),
         updatedAt: daysAgo(2),
@@ -62,6 +64,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1005), // Lan
         startsAt: vnTime(2, 17),
         endsAt: vnTime(2, 18, 30),
+        totalPrice: 375000,
         status: 'CANCELLED',
         cancelledAt: daysAgo(1),
         cancelledById: id(1005),
@@ -76,6 +79,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1006), // Huy
         startsAt: vnTime(3, 20),
         endsAt: vnTime(3, 21),
+        totalPrice: 350000,
         status: 'CANCELLED',
         cancelledAt: now,
         cancelledById: id(1004), // Minh
@@ -90,6 +94,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1005), // Lan
         startsAt: vnTime(-1, 18),
         endsAt: vnTime(-1, 19),
+        totalPrice: 250000,
         status: 'CONFIRMED',
         createdAt: daysAgo(5),
         updatedAt: daysAgo(5),
@@ -101,6 +106,7 @@ export class InMemoryBookingRepository implements IBookingRepository {
         userId: id(1004), // Minh
         startsAt: vnTime(1, 7),
         endsAt: vnTime(1, 8),
+        totalPrice: 350000,
         status: 'CONFIRMED',
         createdAt: daysAgo(1),
         updatedAt: daysAgo(1),

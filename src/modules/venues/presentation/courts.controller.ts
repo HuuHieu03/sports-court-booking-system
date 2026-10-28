@@ -44,7 +44,9 @@ export class CourtsController {
       venueId: c.venueId,
       name: c.name,
       description: c.description,
+      hourlyRate: c.hourlyRate,
       createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
     }));
   }
 
@@ -63,6 +65,7 @@ export class CourtsController {
       venueId: court.venueId,
       name: court.name,
       description: court.description,
+      hourlyRate: court.hourlyRate,
       createdAt: court.createdAt.toISOString(),
       updatedAt: court.updatedAt.toISOString(),
     };
@@ -78,6 +81,7 @@ export class CourtsController {
       venueId: c.venueId,
       name: c.name,
       description: c.description,
+      hourlyRate: c.hourlyRate,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     };
@@ -101,6 +105,8 @@ export class CourtsController {
       venueId: updated.venueId,
       name: updated.name,
       description: updated.description,
+      hourlyRate: updated.hourlyRate,
+      createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
     };
   }

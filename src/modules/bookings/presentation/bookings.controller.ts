@@ -30,9 +30,12 @@ export class BookingsController {
       userId: booking.userId,
       startsAt: booking.startsAt.toISOString(),
       endsAt: booking.endsAt.toISOString(),
+      totalPrice: booking.totalPrice,
       status: booking.status,
       createdAt: booking.createdAt.toISOString(),
       updatedAt: booking.updatedAt.toISOString(),
+      cancelledAt: null,
+      cancellationReason: null,
     };
   }
 }

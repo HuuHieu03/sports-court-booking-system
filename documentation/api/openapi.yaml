@@ -1527,6 +1527,7 @@ components:
         - venueId
         - name
         - description
+        - hourlyRate
       properties:
         id:
           type: string
@@ -1543,6 +1544,11 @@ components:
           type: string
           nullable: true
           example: Sân cỏ nhân tạo.
+        hourlyRate:
+          type: integer
+          minimum: 0
+          description: Đơn giá thuê sân mỗi giờ (VND).
+          example: 300000
     CreateCourtRequest:
       type: object
       additionalProperties: false
@@ -1553,6 +1559,11 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        hourlyRate:
+          type: integer
+          minimum: 0
+          description: Đơn giá thuê sân mỗi giờ (VND).
+          example: 300000
         description:
           type: string
           nullable: true
@@ -1566,6 +1577,11 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        hourlyRate:
+          type: integer
+          minimum: 0
+          description: Đơn giá thuê sân mỗi giờ (VND).
+          example: 300000
         description:
           type: string
           nullable: true
@@ -1624,6 +1640,7 @@ components:
         - userId
         - startsAt
         - endsAt
+        - totalPrice
         - status
         - createdAt
         - cancelledAt
@@ -1653,6 +1670,11 @@ components:
           type: string
           format: date-time
           example: '2026-10-20T19:00:00+07:00'
+        totalPrice:
+          type: integer
+          minimum: 0
+          description: Tổng tiền thuê sân (VND), tính theo thời lượng và hourlyRate của Court tại thời điểm đặt.
+          example: 300000
         status:
           type: string
           enum:

@@ -112,14 +112,14 @@ async function main() {
   ];
 
   const courts = [
-    { id: COURT.anPhu1, venueId: VENUE.anPhu, name: 'Sân 1', description: 'Sân 5 người.' },
-    { id: COURT.anPhu2, venueId: VENUE.anPhu, name: 'Sân 2', description: 'Sân 5 người.' },
-    { id: COURT.anPhu3, venueId: VENUE.anPhu, name: 'Sân 3', description: 'Sân 7 người.' },
-    { id: COURT.thaoDienA, venueId: VENUE.thaoDien, name: 'Sân A', description: null },
-    { id: COURT.thaoDienB, venueId: VENUE.thaoDien, name: 'Sân B', description: null },
-    { id: COURT.thaoDienDeleted, venueId: VENUE.thaoDien, name: 'Sân C', description: 'Đã xóa logic.', deletedAt },
-    { id: COURT.thuDuc5, venueId: VENUE.thuDuc, name: 'Sân 5 người', description: null },
-    { id: COURT.thuDuc7, venueId: VENUE.thuDuc, name: 'Sân 7 người', description: null },
+    { id: COURT.anPhu1, venueId: VENUE.anPhu, name: 'Sân 1', description: 'Sân 5 người.', hourlyRate: 250000 },
+    { id: COURT.anPhu2, venueId: VENUE.anPhu, name: 'Sân 2', description: 'Sân 5 người.', hourlyRate: 250000 },
+    { id: COURT.anPhu3, venueId: VENUE.anPhu, name: 'Sân 3', description: 'Sân 7 người.', hourlyRate: 350000 },
+    { id: COURT.thaoDienA, venueId: VENUE.thaoDien, name: 'Sân A', description: null, hourlyRate: 300000 },
+    { id: COURT.thaoDienB, venueId: VENUE.thaoDien, name: 'Sân B', description: null, hourlyRate: 300000 },
+    { id: COURT.thaoDienDeleted, venueId: VENUE.thaoDien, name: 'Sân C', description: 'Đã xóa logic.', hourlyRate: 300000, deletedAt },
+    { id: COURT.thuDuc5, venueId: VENUE.thuDuc, name: 'Sân 5 người', description: null, hourlyRate: 250000 },
+    { id: COURT.thuDuc7, venueId: VENUE.thuDuc, name: 'Sân 7 người', description: null, hourlyRate: 350000 },
   ];
 
   const applications = [
@@ -144,9 +144,9 @@ async function main() {
 
   const confirmed = { status: 'CONFIRMED', cancelledAt: null, cancelledById: null, cancellationReason: null } as const;
   const bookings = [
-    { id: id(6001), courtId: COURT.anPhu1, venueId: VENUE.anPhu, userId: ACCOUNT.userLan, startsAt: vnTime(1, 18), endsAt: vnTime(1, 19), ...confirmed },
+    { id: id(6001), courtId: COURT.anPhu1, venueId: VENUE.anPhu, userId: ACCOUNT.userLan, startsAt: vnTime(1, 18), endsAt: vnTime(1, 19), totalPrice: 250000, ...confirmed },
     // Liền giờ với booking trên, được phép.
-    { id: id(6002), courtId: COURT.anPhu1, venueId: VENUE.anPhu, userId: ACCOUNT.userHuy, startsAt: vnTime(1, 19), endsAt: vnTime(1, 20), ...confirmed },
+    { id: id(6002), courtId: COURT.anPhu1, venueId: VENUE.anPhu, userId: ACCOUNT.userHuy, startsAt: vnTime(1, 19), endsAt: vnTime(1, 20), totalPrice: 250000, ...confirmed },
     {
       id: id(6003),
       courtId: COURT.anPhu2,
@@ -154,6 +154,7 @@ async function main() {
       userId: ACCOUNT.userLan,
       startsAt: vnTime(2, 17),
       endsAt: vnTime(2, 18, 30),
+      totalPrice: 375000,
       status: 'CANCELLED',
       cancelledAt: vnTime(-1, 20),
       cancelledById: ACCOUNT.userLan,
@@ -166,15 +167,16 @@ async function main() {
       userId: ACCOUNT.userHuy,
       startsAt: vnTime(3, 20),
       endsAt: vnTime(3, 21),
+      totalPrice: 350000,
       status: 'CANCELLED',
       cancelledAt: vnTime(0, 8),
       cancelledById: ACCOUNT.managerMinh,
       cancellationReason: 'Sân cần sửa hệ thống chiếu sáng.',
     },
     // Booking đã diễn ra, dùng để thử lịch sử.
-    { id: id(6005), courtId: COURT.thuDuc5, venueId: VENUE.thuDuc, userId: ACCOUNT.userLan, startsAt: vnTime(-1, 18), endsAt: vnTime(-1, 19), ...confirmed },
+    { id: id(6005), courtId: COURT.thuDuc5, venueId: VENUE.thuDuc, userId: ACCOUNT.userLan, startsAt: vnTime(-1, 18), endsAt: vnTime(-1, 19), totalPrice: 250000, ...confirmed },
     // Manager vẫn đặt sân như một User.
-    { id: id(6006), courtId: COURT.thuDuc7, venueId: VENUE.thuDuc, userId: ACCOUNT.managerMinh, startsAt: vnTime(1, 7), endsAt: vnTime(1, 8), ...confirmed },
+    { id: id(6006), courtId: COURT.thuDuc7, venueId: VENUE.thuDuc, userId: ACCOUNT.managerMinh, startsAt: vnTime(1, 7), endsAt: vnTime(1, 8), totalPrice: 350000, ...confirmed },
   ] as const;
 
   const feedback = [

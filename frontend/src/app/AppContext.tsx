@@ -197,7 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 courtType: c.name.includes('7') ? 'SEVEN_A_SIDE' : 'FIVE_A_SIDE',
                 courtTypeLabel: c.name.includes('7') ? 'Sân 7 người' : 'Sân 5 người',
                 description: c.description || 'Sân cỏ nhân tạo tiêu chuẩn.',
-                hourlyRate: c.name.includes('7') ? 350000 : 250000,
+                hourlyRate: typeof c.hourlyRate === 'number' ? c.hourlyRate : (c.name.includes('7') ? 350000 : 250000),
                 status: 'ACTIVE',
               });
             });
@@ -239,7 +239,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               startTime: formatLocalTime(b.startsAt),
               endTime: formatLocalTime(b.endsAt),
               durationMinutes: duration,
-              totalPrice: duration * 4000,
+              totalPrice: typeof b.totalPrice === 'number' ? b.totalPrice : Math.round((duration * (foundCourt?.hourlyRate || 300000)) / 60),
               status: b.status,
               cancellationReason: b.cancellationReason || undefined,
               cancelledBy: b.cancelledById ? (b.cancelledById === user.id ? 'USER' : 'MANAGER') : undefined,
@@ -299,7 +299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               startTime: formatLocalTime(b.startsAt),
               endTime: formatLocalTime(b.endsAt),
               durationMinutes: duration,
-              totalPrice: duration * 4000,
+              totalPrice: typeof b.totalPrice === 'number' ? b.totalPrice : Math.round((duration * (foundCourt?.hourlyRate || 300000)) / 60),
               status: b.status,
               cancellationReason: b.cancellationReason || undefined,
               cancelledBy: b.cancelledById ? (b.cancelledById === b.userId ? 'USER' : 'MANAGER') : undefined,
@@ -658,6 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           name: courtData.name,
           description: courtData.description,
+          hourlyRate: courtData.hourlyRate,
         }),
       });
       await reloadVenuesAndCourts();
@@ -675,6 +676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           name: updatedData.name,
           description: updatedData.description,
+          hourlyRate: updatedData.hourlyRate,
         }),
       });
       await reloadVenuesAndCourts();

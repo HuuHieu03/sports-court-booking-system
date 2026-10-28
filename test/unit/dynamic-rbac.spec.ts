@@ -10,6 +10,7 @@ import { NotificationsService } from '../../src/modules/notifications/applicatio
 
 describe('Dynamic RBAC Verification', () => {
   let staffingService: StaffingService;
+  let notifRepo: InMemoryNotificationRepository;
   const ownerId = '00000000-0000-4000-8000-000000001002'; // ownerAnPhu
   const venueId = '00000000-0000-4000-8000-000000002001'; // anPhu
   const managerId = '00000000-0000-4000-8000-000000001004'; // managerMinh
@@ -19,7 +20,7 @@ describe('Dynamic RBAC Verification', () => {
     const venueRepo = new InMemoryVenueRepository();
     const courtRepo = new InMemoryCourtRepository();
     const accountRepo = new InMemoryAccountRepository();
-    const notifRepo = new InMemoryNotificationRepository();
+    notifRepo = new InMemoryNotificationRepository();
 
     const notifService = new NotificationsService(notifRepo);
     const usersService = new UsersService(accountRepo);
@@ -36,5 +37,23 @@ describe('Dynamic RBAC Verification', () => {
     await staffingService.revokeManager(ownerId, venueId, managerId);
     const isActive = await staffingService.isUserActiveManager(managerId, venueId);
     expect(isActive).toBe(false);
+  });
+
+  it('should dispatch MANAGER_APPOINTED notification when appointing manager', async () => {
+    // 1. Revoke existing manager Minh first
+    await staffingService.revokeManager(ownerId, venueId, managerId);
+
+    // 2. Appoint applicant Lan (app2: 00000000-4002, applicantId: 1005)
+    const lanApplicantId = '00000000-0000-4000-8000-000000001005';
+    const app2Id = '00000000-0000-4000-8000-000000004002';
+    const result = await staffingService.appointManager(ownerId, venueId, app2Id);
+
+    expect(result.userId).toBe(lanApplicantId);
+
+    // 3. Verify MANAGER_APPOINTED notification dispatched
+    const notifs = await notifRepo.findByRecipientId(lanApplicantId);
+    expect(notifs.length).toBeGreaterThan(0);
+    expect(notifs[0].type).toBe('MANAGER_APPOINTED');
+    expect(notifs[0].status).toBe('SENT');
   });
 });

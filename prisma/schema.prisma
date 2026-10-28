@@ -45,6 +45,8 @@ enum ApplicationStatus {
 
 enum NotificationType {
   BOOKING_CANCELLED_BY_VENUE
+  MANAGER_APPOINTED
+  BOOKING_CONFIRMED
 
   @@map("notification_type")
 }
@@ -110,6 +112,7 @@ model Court {
   venueId     String    @map("venue_id") @db.Uuid
   name        String    @db.VarChar(200)
   description String?   @db.VarChar(2000)
+  hourlyRate  Int       @default(300000) @map("hourly_rate")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -131,6 +134,7 @@ model Booking {
   userId             String        @map("user_id") @db.Uuid
   startsAt           DateTime      @map("starts_at") @db.Timestamptz(3)
   endsAt             DateTime      @map("ends_at") @db.Timestamptz(3)
+  totalPrice         Int           @default(0) @map("total_price")
   status             BookingStatus @default(CONFIRMED)
   cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamptz(3)
   cancelledById      String?       @map("cancelled_by_id") @db.Uuid
