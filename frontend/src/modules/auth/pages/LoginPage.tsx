@@ -80,7 +80,7 @@ export const LoginPage: React.FC = () => {
     {
       id: 'ACC-04',
       label: 'Chủ Sân An Phú',
-      sub: 'Lê Chủ Sân (Owner)',
+      sub: 'Trần Quốc An (Owner)',
       email: 'owner.anphu@example.com',
       role: 'OWNER',
       icon: Building2,
@@ -88,8 +88,8 @@ export const LoginPage: React.FC = () => {
     },
     {
       id: 'ACC-03',
-      label: 'Quản Lý Minh',
-      sub: 'Vũ Đình Minh (Manager)',
+      label: 'Quản Lý Sân An Phú',
+      sub: 'Phạm Minh Đức (Manager)',
       email: 'manager.minh@example.com',
       role: 'MANAGER',
       icon: ClipboardList,
@@ -98,7 +98,7 @@ export const LoginPage: React.FC = () => {
     {
       id: 'ACC-01',
       label: 'Khách Đặt Sân',
-      sub: 'Nguyễn Văn Lan (User)',
+      sub: 'Nguyễn Ngọc Lan (User)',
       email: 'user.lan@example.com',
       role: 'USER',
       icon: User,
@@ -224,7 +224,7 @@ export const LoginPage: React.FC = () => {
             <div className="text-center pt-1">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('locked.user@example.com')}
+                onClick={() => handleQuickLogin('user.locked@example.com')}
                 className="text-[10px] text-slate-500 hover:text-rose-400 underline transition-colors"
               >
                 Thử đăng nhập tài khoản vi phạm (LOCKED demo)

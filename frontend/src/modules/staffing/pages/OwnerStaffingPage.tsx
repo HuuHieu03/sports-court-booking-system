@@ -11,8 +11,8 @@ export const OwnerStaffingPage: React.FC = () => {
     applications,
     appointManager,
     revokeManager,
-    reopenApplication,
     toggleRecruitment,
+    updateRecruitmentMessage,
     currentUser,
     selectedVenueId,
     setSelectedVenueId,
@@ -40,10 +40,10 @@ export const OwnerStaffingPage: React.FC = () => {
     setIsEditRecruitmentOpen(true);
   };
 
-  const handleSaveRecruitment = (e: React.FormEvent) => {
+  const handleSaveRecruitment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!venue) return;
-    toggleRecruitment(venue.id, recruitmentMessage);
+    await updateRecruitmentMessage(venue.id, recruitmentMessage);
     setIsEditRecruitmentOpen(false);
   };
 
@@ -269,33 +269,24 @@ export const OwnerStaffingPage: React.FC = () => {
                       Đang đảm nhiệm
                     </span>
                   ) : app.status === 'REVOKED' ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => reopenApplication(app.id)}
-                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold text-xs transition-all"
-                        title="Chuyển hồ sơ về trạng thái chờ duyệt (SUBMITTED)"
-                      >
-                        Mở lại xét duyệt
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAppointingApp(app);
-                          setAppointError('');
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
-                      >
-                        Bổ nhiệm lại
-                      </button>
-                    </div>
+                    <span className="text-[11px] text-slate-500 italic bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                      Đã thu hồi (Cần nộp hồ sơ mới để xét duyệt)
+                    </span>
                   ) : (
                     <button
                       onClick={() => {
                         setAppointingApp(app);
                         setAppointError('');
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
+                      disabled={!!venue.activeManager}
+                      title={venue.activeManager ? 'Cần thu hồi Manager đương nhiệm trước khi bổ nhiệm người mới' : undefined}
+                      className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all ${
+                        venue.activeManager
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                          : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20 hover:scale-105'
+                      }`}
                     >
-                      Phê duyệt bổ nhiệm Manager
+                      {venue.activeManager ? 'Đã có Manager đương nhiệm' : 'Phê duyệt bổ nhiệm Manager'}
                     </button>
                   )}
                 </div>

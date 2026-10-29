@@ -59,11 +59,21 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResult> {
-    const normalizedEmail = dto.email.trim().toLowerCase();
-    const account = await this.usersService.findByEmail(normalizedEmail);
+    const rawIdentifier = dto.email.trim();
+    let account = null;
+
+    if (rawIdentifier.includes('@')) {
+      account = await this.usersService.findByEmail(rawIdentifier.toLowerCase());
+    } else {
+      const normalizedPhone = this.normalizePhone(rawIdentifier);
+      account = await this.usersService.findByPhone(normalizedPhone);
+      if (!account) {
+        account = await this.usersService.findByEmail(rawIdentifier.toLowerCase());
+      }
+    }
 
     if (!account) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
+      throw new UnauthorizedException('Email, số điện thoại hoặc mật khẩu không chính xác');
     }
 
     if (account.isLocked() || account.isDeleted()) {
@@ -74,7 +84,7 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(dto.password, account.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
+      throw new UnauthorizedException('Email, số điện thoại hoặc mật khẩu không chính xác');
     }
 
     const payload: JwtPayload = {

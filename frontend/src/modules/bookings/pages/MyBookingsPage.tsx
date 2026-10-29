@@ -114,10 +114,19 @@ export const MyBookingsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {b.cancellationReason && (
-                  <p className="text-[11px] text-rose-400 bg-rose-950/40 p-2 rounded-lg border border-rose-900/40">
-                    Lý do hủy: &quot;{b.cancellationReason}&quot; (Hủy bởi {b.cancelledBy || 'Quản lý'})
-                  </p>
+                {b.status === 'CANCELLED' && (
+                  <div className="text-[11px] bg-rose-950/40 p-2.5 rounded-xl border border-rose-900/40 space-y-1">
+                    <p className="font-bold text-rose-300">
+                      {b.cancelledBy === 'USER'
+                        ? 'Bạn tự hủy lịch đặt'
+                        : 'Quản lý sân hủy lịch đặt'}
+                    </p>
+                    {b.cancellationReason && (
+                      <p className="text-slate-300">
+                        Lý do hủy: &quot;{b.cancellationReason}&quot;
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 

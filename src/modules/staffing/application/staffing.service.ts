@@ -30,7 +30,7 @@ export class StaffingService {
   async setRecruitment(
     ownerId: string,
     venueId: string,
-    recruitmentOpen: boolean,
+    recruitmentOpen?: boolean,
     recruitmentMessage?: string | null,
   ) {
     const venue = await this.venuesService.findById(venueId);

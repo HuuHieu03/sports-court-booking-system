@@ -11,6 +11,7 @@ import {
   getTomorrowDateString,
   validateBookingTime,
 } from '../../../lib/utils';
+import { apiRequest } from '../../../lib/api-client';
 import { Court } from '../../../types';
 import {
   ArrowLeft,
@@ -70,6 +71,43 @@ export const VenueDetailPage: React.FC = () => {
   const myApp = currentUser
     ? applications.find(a => a.venueId === venue?.id && a.applicantId === currentUser.id)
     : undefined;
+
+  // Real availability loaded from backend GET /courts/:courtId/availability?date=...
+  const [courtAvailabilityMap, setCourtAvailabilityMap] = useState<Record<string, { startsAt: string; endsAt: string }[]>>({});
+
+  useEffect(() => {
+    if (!venueCourts || venueCourts.length === 0 || !bookingDate) return;
+    let isMounted = true;
+
+    Promise.all(
+      venueCourts.map(court =>
+        apiRequest<{ courtId: string; bookings: { startsAt: string; endsAt: string; status: string }[] }>(
+          `/courts/${court.id}/availability?date=${bookingDate}`
+        )
+          .then(res => ({
+            courtId: court.id,
+            bookings: (res?.bookings || []).filter(b => b.status === 'CONFIRMED'),
+          }))
+          .catch(() => ({ courtId: court.id, bookings: null }))
+      )
+    ).then(results => {
+      if (!isMounted) return;
+      const map: Record<string, { startsAt: string; endsAt: string }[] | null> = {};
+      results.forEach(r => {
+        map[r.courtId] = r.bookings;
+      });
+      setCourtAvailabilityMap(map as Record<string, { startsAt: string; endsAt: string }[]>);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [venueCourts, bookingDate]);
+
+  const avgRating = venueFeedbacks.length > 0
+    ? (venueFeedbacks.reduce((acc, fb) => acc + (fb.rating || 5), 0) / venueFeedbacks.length).toFixed(1)
+    : '5.0';
+
 
   // Standard predefined time slots for display covering morning, afternoon, and evening
   const standardSlots = [
@@ -479,10 +517,24 @@ export const VenueDetailPage: React.FC = () => {
                   {/* Slot buttons grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-1">
                     {standardSlots.map(slot => {
-                      // Check overlap with existing confirmed bookings
-                      const isBooked = courtBookings.some(b =>
+                      // Check overlap with backend availability or local confirmed bookings
+                      const backendBookings = courtAvailabilityMap[court.id];
+                      const isBookedInBackend = backendBookings
+                        ? backendBookings.some(b => {
+                            const [y, m, d] = bookingDate.split('-').map(Number);
+                            const [sh, sm] = slot.start.split(':').map(Number);
+                            const [eh, em] = slot.end.split(':').map(Number);
+                            const slotStartMs = new Date(y, m - 1, d, sh, sm, 0, 0).getTime();
+                            const slotEndMs = new Date(y, m - 1, d, eh, em, 0, 0).getTime();
+                            const bStartMs = new Date(b.startsAt).getTime();
+                            const bEndMs = new Date(b.endsAt).getTime();
+                            return slotStartMs < bEndMs && slotEndMs > bStartMs;
+                          })
+                        : false;
+                      const isBookedLocally = courtBookings.some(b =>
                         isTimeOverlapping(slot.start, slot.end, b.startTime, b.endTime)
                       );
+                      const isBooked = isBookedInBackend || isBookedLocally;
 
                       const isSelected =
                         selectedSlot?.court.id === court.id &&
@@ -581,7 +633,7 @@ export const VenueDetailPage: React.FC = () => {
           <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
             <div className="flex items-center gap-1 text-amber-400 font-bold text-sm">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              4.8 / 5.0
+              {avgRating} / 5.0
             </div>
             <span className="text-slate-400">({venueFeedbacks.length} lượt đánh giá)</span>
           </div>

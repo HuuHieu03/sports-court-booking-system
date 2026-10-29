@@ -11,6 +11,7 @@ export const OwnerVenuesPage: React.FC = () => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [recruitmentMessage, setRecruitmentMessage] = useState('');
+  const [isRecruiting, setIsRecruiting] = useState(false);
 
   // Owner venues - strictly filtered by ownerId
   const myVenues = venues.filter(v => v.ownerId === currentUser?.id);
@@ -22,13 +23,14 @@ export const OwnerVenuesPage: React.FC = () => {
     addVenue({
       name: name.trim(),
       address: address.trim(),
-      isRecruiting: false,
+      isRecruiting: isRecruiting || !!recruitmentMessage.trim(),
       recruitmentMessage: recruitmentMessage.trim() || undefined,
     });
 
     setName('');
     setAddress('');
     setRecruitmentMessage('');
+    setIsRecruiting(false);
     setIsAddVenueModalOpen(false);
   };
 
@@ -208,6 +210,19 @@ export const OwnerVenuesPage: React.FC = () => {
               placeholder="Ví dụ: Tìm quản lý sân ca tối, hỗ trợ vận hành và CSKH..."
               className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-xs"
             />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="isRecruiting"
+              checked={isRecruiting}
+              onChange={e => setIsRecruiting(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0"
+            />
+            <label htmlFor="isRecruiting" className="text-xs text-slate-300 font-medium cursor-pointer">
+              Mở tuyển dụng Quản lý sân ngay sau khi tạo
+            </label>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

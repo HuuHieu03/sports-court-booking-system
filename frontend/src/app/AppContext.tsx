@@ -73,6 +73,7 @@ interface AppContextType {
   deleteCourt: (courtId: string) => Promise<{ success: boolean; message: string }>;
   addVenue: (venue: Omit<Venue, 'id' | 'createdAt' | 'ownerId' | 'ownerName'>) => Promise<void>;
   toggleRecruitment: (venueId: string, message?: string) => Promise<void>;
+  updateRecruitmentMessage: (venueId: string, message: string) => Promise<void>;
   submitManagerApplication: (venueId: string, consented: boolean) => Promise<{ success: boolean; error?: string }>;
   appointManager: (venueId: string, application: ManagerApplication) => Promise<{ success: boolean; error?: string }>;
   revokeManager: (venueId: string, targetUserId?: string) => Promise<void>;
@@ -207,6 +208,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (allCourts.length > 0) {
           setCourts(allCourts);
         }
+
+        // Fetch feedbacks for each venue
+        const feedbackPromises = backendVenues.map(v =>
+          apiRequest<any[]>(`/venues/${v.id}/feedback`).catch(() => [])
+        );
+        const feedbackResults = await Promise.all(feedbackPromises);
+        const allFeedbacks: Feedback[] = [];
+
+        feedbackResults.forEach(fbList => {
+          if (Array.isArray(fbList)) {
+            fbList.forEach((fb: any) => {
+              allFeedbacks.push({
+                id: fb.id,
+                venueId: fb.venueId,
+                userId: '',
+                userName: 'Khách hàng ẩn danh',
+                rating: 5,
+                comment: fb.content,
+                createdAt: fb.createdAt,
+              });
+            });
+          }
+        });
+
+        if (allFeedbacks.length > 0) {
+          setFeedbacks(prev => {
+            const map = new Map<string, Feedback>();
+            allFeedbacks.forEach(f => map.set(f.id, f));
+            prev.forEach(f => {
+              if (!map.has(f.id)) map.set(f.id, f);
+            });
+            return Array.from(map.values());
+          });
+        }
       }
     } catch (err) {
       console.warn('[PitchSync] Failed to fetch venues from Backend:', err);
@@ -242,7 +277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               totalPrice: typeof b.totalPrice === 'number' ? b.totalPrice : Math.round((duration * (foundCourt?.hourlyRate || 300000)) / 60),
               status: b.status,
               cancellationReason: b.cancellationReason || undefined,
-              cancelledBy: b.cancelledById ? (b.cancelledById === user.id ? 'USER' : 'MANAGER') : undefined,
+              cancelledBy: b.cancelledById ? (b.cancelledById === user.id ? 'USER' : 'MANAGER') : (b.cancellationReason ? 'MANAGER' : (b.status === 'CANCELLED' ? 'USER' : undefined)),
               createdAt: b.createdAt,
             };
           })
@@ -302,7 +337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               totalPrice: typeof b.totalPrice === 'number' ? b.totalPrice : Math.round((duration * (foundCourt?.hourlyRate || 300000)) / 60),
               status: b.status,
               cancellationReason: b.cancellationReason || undefined,
-              cancelledBy: b.cancelledById ? (b.cancelledById === b.userId ? 'USER' : 'MANAGER') : undefined,
+              cancelledBy: b.cancelledById ? (b.cancelledById === b.userId ? 'USER' : 'MANAGER') : (b.cancellationReason ? 'MANAGER' : (b.status === 'CANCELLED' ? 'USER' : undefined)),
               createdAt: b.createdAt,
             });
           });
@@ -708,6 +743,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name: venueData.name,
           address: venueData.address,
           description: venueData.description || 'Cụm sân bóng đá cỏ nhân tạo.',
+          recruitmentOpen: venueData.isRecruiting,
+          recruitmentMessage: venueData.recruitmentMessage,
         }),
       });
       await reloadVenuesAndCourts();
@@ -733,6 +770,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('success', 'Cập nhật tuyển dụng', isOpen ? 'Đã mở chiến dịch tuyển dụng Manager!' : 'Đã đóng chiến dịch tuyển dụng.');
     } catch (err: any) {
       showToast('error', 'Cập nhật thất bại', err.message || 'Có lỗi xảy ra.');
+    }
+  };
+
+  // 8b. Update Recruitment Message without toggling status
+  const updateRecruitmentMessage = async (venueId: string, message: string) => {
+    try {
+      const venue = venues.find(v => v.id === venueId);
+      await apiRequest(`/venues/${venueId}/manager-recruitment`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isOpen: venue?.isRecruiting ?? false,
+          message: message.trim(),
+        }),
+      });
+      await reloadVenuesAndCourts();
+      showToast('success', 'Cập nhật mô tả tuyển dụng', 'Đã lưu mô tả thông điệp tuyển dụng mới!');
+    } catch (err: any) {
+      showToast('error', 'Cập nhật mô tả thất bại', err.message || 'Có lỗi xảy ra.');
     }
   };
 
@@ -985,6 +1040,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteCourt,
         addVenue,
         toggleRecruitment,
+        updateRecruitmentMessage,
         submitManagerApplication,
         appointManager,
         revokeManager,

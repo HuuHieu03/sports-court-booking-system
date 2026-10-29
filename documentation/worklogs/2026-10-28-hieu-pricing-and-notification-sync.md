@@ -49,4 +49,8 @@ Nhánh hoặc commit: hieu
 
 ## Vướng mắc và việc tiếp theo
 
+- Đã cập nhật tài liệu tổng quan toàn diện tại `README.md` ở thư mục gốc của repository (khoảng 3 trang A4): mô tả bài toán, kiến trúc 4 tầng Modular Monolith, use cases, tech stack, phân tích chi tiết bản chất và hướng giải quyết cho 5 intentional defect hooks (HOOK-01 đến HOOK-05), hướng dẫn khởi chạy Docker và tài khoản test.
+- Đã xuất bản và lưu bản đặc tả API `openapi.yaml` và `openapi.json` ngay tại trang chính của repository để người dùng có thể preview trực tiếp trên GitHub/Swagger.
+- Tiếp tục duy trì và chạy thử nghiệm các kịch bản kiểm thử tải trọng (k6 benchmark).
+
 - Khi triển khai lên môi trường chạy PostgreSQL thật (Docker/Production), cần chạy `npx prisma migrate deploy` hoặc khởi động container `db-init` để migration được tự động áp dụng.

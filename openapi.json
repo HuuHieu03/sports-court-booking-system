@@ -1,0 +1,2640 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Football Booking MVP API",
+    "version": "0.2.0",
+    "description": "Ứng dụng giúp người dùng tìm và đặt sân bóng đá, đồng thời hỗ trợ chủ sân và quản lý vận hành cụm sân, theo dõi lịch đặt."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Backend local dự kiến, chưa triển khai"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Tài khoản",
+      "description": "Đăng ký, đăng nhập và xem tài khoản của chính mình."
+    },
+    {
+      "name": "Công khai",
+      "description": "Tra cứu Venue, Court, sân trống và feedback. Không cần đăng nhập."
+    },
+    {
+      "name": "User",
+      "description": "Mọi tài khoản đang hoạt động đều có quyền User, bao gồm Owner và Manager: đặt/hủy booking cá nhân, gửi feedback và ứng tuyển."
+    },
+    {
+      "name": "Owner",
+      "description": "Tạo Venue, quản lý các Venue thuộc sở hữu và tuyển/bổ nhiệm/thu hồi Manager. Manager không được gọi các API trong nhóm này."
+    },
+    {
+      "name": "Owner và Manager",
+      "description": "Owner sở hữu Venue hoặc Manager được bổ nhiệm tại Venue đó. Được quản lý sân, xem hồ sơ khách và hủy booking của khách kèm lý do, thông báo."
+    },
+    {
+      "name": "Admin",
+      "description": "Chỉ Admin: xem, khóa, mở khóa và xóa tài khoản. Quyền Admin không mặc định cấp quyền Owner hoặc Manager."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Tài khoản"
+        ],
+        "summary": "Đăng ký tài khoản",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Tài khoản mới của người đăng ký.\n\nChọn USER hoặc OWNER khi đăng ký. Cung cấp tên, email, số điện thoại và mật khẩu. Thành công trả thông tin tài khoản và access token; email hoặc số điện thoại đã được dùng trả 409.",
+        "operationId": "postAuthRegister",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Tài khoản"
+        ],
+        "summary": "Đăng nhập",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Tài khoản khớp email và mật khẩu.\n\nThành công trả access token. Thông tin sai, tài khoản bị khóa hoặc đã xóa trả 401 với thông báo chung.",
+        "operationId": "postAuthLogin",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "Tài khoản"
+        ],
+        "summary": "Xem tài khoản của chính mình",
+        "description": "**Ai được gọi:** User, Owner, Manager hoặc Admin đã đăng nhập.\n\n**Phạm vi:** Chỉ tài khoản gắn với token hiện tại.\n\nTrả tên, email, số điện thoại, vai trò và danh sách Venue đang được bổ nhiệm quản lý.",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/venues": {
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Tìm và xem các Venue",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Tất cả Venue chưa bị xóa.\n\nTìm theo tên hoặc địa chỉ bằng q; bỏ q để xem danh sách Venue.",
+        "operationId": "getVenues",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Từ khóa tìm kiếm; bỏ qua để xem tất cả.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Tạo Venue",
+        "description": "**Ai được gọi:** Chỉ Owner đã đăng nhập.\n\n**Phạm vi:** Venue mới thuộc sở hữu người gọi.\n\nTạo Venue với tên, địa chỉ và mô tả. Owner được lấy từ token. Thông báo tuyển Manager mặc định đóng.",
+        "operationId": "postVenues",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVenueRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venueId}": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Xem chi tiết Venue",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Venue có ID trên đường dẫn, chưa bị xóa.\n\nTrả thông tin Venue và thông báo tuyển Manager. Không trả profile hoặc liên hệ cá nhân của Owner/Manager.",
+        "operationId": "getVenuesVenueid",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": []
+      },
+      "delete": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Xóa Venue",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Venue thuộc sở hữu người gọi và các Court trong Venue đó.\n\n**Xử lý xóa:** xóa logic Venue và các Court, đóng tuyển và thu hồi bổ nhiệm Manager (hồ sơ APPOINTED chuyển thành REVOKED). Giữ lịch sử booking; Venue/Court đã xóa không còn xuất hiện trong tra cứu hoặc nhận booking mới. Chặn xóa nếu bất kỳ Court nào còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Các thay đổi phải hoàn tất cùng nhau.",
+        "operationId": "deleteVenue",
+        "responses": {
+          "204": {
+            "description": "Thành công, không có response body."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Venue còn booking đang diễn ra hoặc sắp tới.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "VENUE_HAS_ACTIVE_BOOKINGS",
+                  "message": "Chưa thể xóa Venue vì còn booking chưa kết thúc."
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Cập nhật Venue",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Venue người gọi sở hữu hoặc đang được bổ nhiệm quản lý.\n\nCập nhật tên, địa chỉ hoặc mô tả. Không chuyển quyền sở hữu hoặc thay đổi quyền Manager.",
+        "operationId": "patchVenuesVenueid",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVenueRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/courts": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Xem các Court của Venue",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Các Court chưa bị xóa thuộc Venue trên đường dẫn.\n\nTrả danh sách sân của Venue; danh sách rỗng nếu chưa có sân.",
+        "operationId": "getVenuesVenueidCourts",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Court"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Thêm Court vào Venue",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Court mới trong Venue người gọi được quản lý.\n\nTạo sân với tên và mô tả. venueId được lấy từ đường dẫn.",
+        "operationId": "postVenuesVenueidCourts",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourtRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courts/{courtId}": {
+      "parameters": [
+        {
+          "name": "courtId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Xem chi tiết Court",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Court có ID trên đường dẫn, chưa bị xóa.\n\nTrả thông tin sân và venueId.",
+        "operationId": "getCourtsCourtid",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": []
+      },
+      "patch": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Cập nhật Court",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Court thuộc Venue người gọi được quản lý.\n\nCập nhật tên hoặc mô tả sân. Không chuyển Court sang Venue khác.",
+        "operationId": "patchCourtsCourtid",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCourtRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Xóa Court",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Court thuộc Venue người gọi được quản lý.\n\n**Xử lý xóa:** xóa logic Court và giữ lịch sử booking. Court đã xóa không còn xuất hiện trong tra cứu và không nhận booking mới. Chặn xóa nếu sân còn booking CONFIRMED có endsAt sau thời điểm hiện tại. Không tự hủy booking của khách.",
+        "operationId": "deleteCourt",
+        "responses": {
+          "204": {
+            "description": "Thành công, không có response body."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Court còn booking đang diễn ra hoặc sắp tới.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "COURT_HAS_ACTIVE_BOOKINGS",
+                  "message": "Chưa thể xóa Court vì còn booking chưa kết thúc."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courts/{courtId}/availability": {
+      "parameters": [
+        {
+          "name": "courtId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Kiểm tra sân trống trong khung giờ",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Một Court và khung giờ startsAt–endsAt.\n\nstartsAt phải ở tương lai, endsAt sau startsAt và cả hai có múi giờ. Trả available=true khi không trùng booking CONFIRMED. Hai booking được phép liền giờ; booking CANCELLED không giữ sân. Kết quả kiểm tra không giữ chỗ và không tiết lộ người đặt khác.",
+        "operationId": "getCourtsCourtidAvailability",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "startsAt",
+            "in": "query",
+            "required": true,
+            "description": "Giờ bắt đầu, bắt buộc có múi giờ.",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-10-20T18:00:00+07:00"
+            }
+          },
+          {
+            "name": "endsAt",
+            "in": "query",
+            "required": true,
+            "description": "Giờ kết thúc, sau startsAt.",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-10-20T19:00:00+07:00"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "Ngày cần kiểm tra toàn bộ lịch đặt và khung giờ trống dạng YYYY-MM-DD.",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-20"
+            }
+          }
+        ]
+      }
+    },
+    "/venues/{venueId}/feedback": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Công khai"
+        ],
+        "summary": "Xem feedback của Venue",
+        "description": "**Ai được gọi:** Bất kỳ ai; không cần đăng nhập.\n\n**Phạm vi:** Feedback của Venue trên đường dẫn.\n\nTrả nội dung feedback, không kèm profile hoặc thông tin liên hệ người gửi.",
+        "operationId": "getVenuesVenueidFeedback",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Feedback"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Gửi feedback cho Venue",
+        "description": "**Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.\n\n**Phạm vi:** Feedback cho Venue trên đường dẫn.\n\nGửi nội dung văn bản. Tác giả được lấy từ token. Điều kiện bắt buộc đã đặt sân trước khi feedback vẫn cần chốt.",
+        "operationId": "postVenuesVenueidFeedback",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feedback"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFeedbackRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Đặt sân và xác nhận tự động",
+        "description": "**Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.\n\n**Phạm vi:** Booking mới của chính người gọi; Court phải còn hoạt động.\n\nGửi courtId, startsAt và endsAt. Nếu khung giờ hợp lệ và sân còn trống, tạo booking CONFIRMED ngay. Kiểm tra và đặt sân phải bảo đảm hai request không thể tạo booking trùng nhau.",
+        "operationId": "postBookings",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Sân đã được đặt trong khung giờ này.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BOOKING_CONFLICT",
+                  "message": "Sân đã có booking trùng khung giờ."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/bookings": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Xem booking của chính mình",
+        "description": "**Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.\n\n**Phạm vi:** Chỉ booking do người gọi đặt.\n\nXem danh sách booking của mình; có thể lọc trạng thái CONFIRMED hoặc CANCELLED.",
+        "operationId": "getMeBookings",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo trạng thái, bỏ qua để lấy cả hai.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CONFIRMED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/bookings/{bookingId}/cancel": {
+      "parameters": [
+        {
+          "name": "bookingId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Hủy booking của chính mình",
+        "description": "**Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.\n\n**Phạm vi:** Chỉ booking do người gọi đặt.\n\nHủy khi còn ít nhất 30 phút trước giờ bắt đầu, bao gồm đúng mốc 30 phút theo giờ server. Thành công chuyển thành CANCELLED và giải phóng khung giờ. Nếu đã hủy, trả lại booking hiện tại. Owner/Manager hủy booking của khách qua API hủy trong Venue quản lý, bắt buộc có lý do và thông báo.",
+        "operationId": "postBookingsBookingidCancel",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Đã qua thời hạn hủy booking.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "CANCELLATION_WINDOW_CLOSED",
+                  "message": "Chỉ được hủy khi còn ít nhất 30 phút trước giờ bắt đầu."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/manager-applications": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Ứng tuyển Manager sau khi đồng ý chia sẻ liên hệ",
+        "description": "**Ai được gọi:** User đã đăng nhập; việc đang quản lý Venue khác không ngăn ứng tuyển.\n\n**Phạm vi:** Hồ sơ ứng tuyển của chính người gọi vào Venue đang tuyển Manager.\n\nTrước khi gửi, UI thông báo Owner sẽ xem email và số điện thoại đăng ký. Chỉ tạo hồ sơ khi consentToShareContact=true; server lấy liên hệ từ tài khoản và ghi nhận thời điểm đồng ý. Owner nhận quyền xem liên hệ qua API danh sách ứng viên; hai bên tự trao đổi ngoài ứng dụng. Mỗi User chỉ có một hồ sơ SUBMITTED hoặc APPOINTED tại cùng Venue; hồ sơ REVOKED không chặn lần ứng tuyển mới.",
+        "operationId": "postVenuesVenueidManagerApplications",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerApplication"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Venue đã đóng tuyển hoặc User đã có hồ sơ tại Venue này.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "APPLICATION_CONFLICT",
+                  "message": "Không thể tạo thêm hồ sơ ứng tuyển tại Venue này."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyManagerRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Owner xem hồ sơ và liên hệ ứng viên",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Chỉ ứng viên đã đồng ý chia sẻ liên hệ tại Venue này.\n\nTrả hồ sơ cùng tên, email và số điện thoại đăng ký để Owner chủ động liên hệ. Manager không được xem danh sách ứng viên.",
+        "operationId": "getVenuesVenueidManagerApplications",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OwnerApplicationView"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/me/bookings/{bookingId}": {
+      "parameters": [
+        {
+          "name": "bookingId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Xem chi tiết booking của mình",
+        "description": "**Ai được gọi:** Mọi tài khoản đã đăng nhập và đang hoạt động, bao gồm Owner và Manager.\n\n**Phạm vi:** Chỉ booking do người gọi đặt.\n\nTrả chi tiết booking. Booking không tồn tại hoặc thuộc người khác trả 404.",
+        "operationId": "getMyBooking",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/me/venues": {
+      "get": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Xem các Venue thuộc sở hữu",
+        "description": "**Ai được gọi:** Chỉ Owner đã đăng nhập.\n\n**Phạm vi:** Các Venue chưa bị xóa thuộc sở hữu người gọi.\n\nTrả danh sách Venue của Owner để chọn địa điểm cần quản lý.",
+        "operationId": "getMeVenues",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/manager-recruitment": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Đăng hoặc đóng thông báo tuyển Manager",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Thông báo tuyển Manager của Venue trên đường dẫn.\n\nĐặt isOpen=true để mở tuyển hoặc false để đóng. Cập nhật message để đổi nội dung hiển thị trên trang Venue. Đóng tuyển không xóa hồ sơ đã nhận hoặc quyền Manager hiện tại.",
+        "operationId": "patchVenuesVenueidManagerRecruitment",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recruitment"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecruitmentRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/managers": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Owner xác nhận bổ nhiệm Manager",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Một hồ sơ ứng tuyển thuộc Venue trên đường dẫn.\n\nGửi applicationId của hồ sơ SUBMITTED đã đồng ý chia sẻ liên hệ. Ứng viên phải đang hoạt động. Mỗi Venue chỉ có tối đa một Manager; ứng viên có thể đang quản lý Venue khác. Khi hai hồ sơ được duyệt đồng thời, chỉ một bổ nhiệm tại Venue được tạo. Thành công cấp quyền quản lý Venue và toàn bộ Court, chuyển hồ sơ thành APPOINTED.",
+        "operationId": "postVenuesVenueidManagers",
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerAppointment"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Hồ sơ đã được bổ nhiệm hoặc Venue đã có Manager.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "APPOINTMENT_CONFLICT",
+                  "message": "Không thể bổ nhiệm Manager từ hồ sơ này."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppointManagerRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Owner xem profile Manager đã bổ nhiệm",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Các Manager đang được bổ nhiệm tại Venue trên đường dẫn.\n\nTrả thông tin bổ nhiệm cùng profile Manager, gồm email và số điện thoại. Không phải API xem profile người dùng tùy ý.",
+        "operationId": "getVenuesVenueidManagers",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OwnerManagerView"
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/managers/{userId}": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID Venue thuộc sở hữu Owner.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "description": "ID tài khoản Manager cần thu hồi quyền.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Owner"
+        ],
+        "summary": "Thu hồi quyền Manager",
+        "description": "**Ai được gọi:** Chỉ Owner sở hữu Venue.\n\n**Phạm vi:** Manager có userId trên đường dẫn phải đang được bổ nhiệm tại chính Venue này.\n\nGỡ bổ nhiệm và chuyển hồ sơ sang REVOKED. Quyền quản lý Venue/Court/booking hết hiệu lực ngay, kể cả với phiên đăng nhập hiện tại. Tài khoản vẫn là User, giữ booking cá nhân và có thể ứng tuyển lại. Owner không còn xem profile qua danh sách Manager; liên hệ trong hồ sơ ứng tuyển vẫn theo sự đồng ý đã có.",
+        "operationId": "revokeVenueManager",
+        "responses": {
+          "204": {
+            "description": "Thành công, không có response body."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/bookings": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Xem booking trong Venue quản lý",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Booking của mọi Court trong Venue người gọi được quản lý.\n\nTrả danh sách booking kèm profile người đặt gồm tên, email và số điện thoại. Có thể lọc theo courtId và status; Court dùng để lọc phải thuộc Venue này. Chỉ xem được profile của người có booking trong Venue mình quản lý.",
+        "operationId": "getVenuesVenueidBookings",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingWithCustomerProfile"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "parameters": [
+          {
+            "name": "courtId",
+            "in": "query",
+            "required": false,
+            "description": "Lọc một Court; Court phải thuộc Venue này.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo trạng thái.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CONFIRMED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/venues/{venueId}/bookings/{bookingId}": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID Venue quản lý.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "bookingId",
+          "in": "path",
+          "required": true,
+          "description": "ID booking thuộc Venue này.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Xem chi tiết booking trong Venue quản lý",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Booking thuộc Venue trên đường dẫn mà người gọi được quản lý.\n\nTrả chi tiết booking kèm profile người đặt gồm tên, email và số điện thoại. Booking thuộc Venue khác hoặc ngoài phạm vi quản lý trả 404.",
+        "operationId": "getVenueBooking",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingWithCustomerProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/bookings/{bookingId}/cancel": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID Venue người gọi được quản lý.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "bookingId",
+          "in": "path",
+          "required": true,
+          "description": "ID booking thuộc Venue này.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Hủy booking của khách và gửi lý do",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Booking thuộc Venue trên đường dẫn mà người gọi được quản lý.\n\nBắt buộc nhập reason. Hệ thống chuyển booking sang CANCELLED, lưu lý do, giải phóng khung giờ và gửi thông báo kèm lý do cho người đặt. Yêu cầu thông báo phải được ghi nhận cùng việc hủy để không bỏ sót. Gọi lại booking đã hủy trả kết quả hiện tại, không ghi đè lý do hay gửi thông báo trùng. Thời hạn hủy của Owner/Manager và kênh gửi thông báo cần chốt.",
+        "operationId": "cancelVenueCustomerBooking",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelCustomerBookingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking đã hủy, kèm lý do và profile người đặt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingWithCustomerProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/venues/{venueId}/bookings/{bookingId}/customer-profile": {
+      "parameters": [
+        {
+          "name": "venueId",
+          "in": "path",
+          "required": true,
+          "description": "ID Venue người gọi sở hữu hoặc đang được bổ nhiệm quản lý.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "bookingId",
+          "in": "path",
+          "required": true,
+          "description": "ID booking thuộc Venue này.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner và Manager"
+        ],
+        "summary": "Xem hồ sơ người đặt sân",
+        "description": "**Ai được gọi:** Owner sở hữu Venue hoặc Manager đang được bổ nhiệm tại Venue đó.\n\n**Phạm vi:** Người đặt booking thuộc Venue trên đường dẫn mà người gọi được quản lý.\n\nTrả hồ sơ người đặt gồm ID, tên, email và số điện thoại. Người dùng được xác định từ booking, không nhận userId tùy ý. Booking không tồn tại, không thuộc Venue hoặc ngoài phạm vi quản lý trả 404.",
+        "operationId": "getBookingCustomerProfile",
+        "responses": {
+          "200": {
+            "description": "Hồ sơ người đặt booking.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/accounts": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin xem danh sách tài khoản",
+        "description": "**Ai được gọi:** Chỉ Admin đã đăng nhập.\n\n**Phạm vi:** Tài khoản trong hệ thống.\n\nXem danh sách tài khoản, có thể lọc theo tên/email và trạng thái. Không trả mật khẩu hoặc password hash.",
+        "operationId": "getAdminAccounts",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountProfile"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Tìm theo tên hoặc email.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo trạng thái.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "LOCKED",
+                "DELETED"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/admin/accounts/{accountId}": {
+      "parameters": [
+        {
+          "name": "accountId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin xem chi tiết tài khoản",
+        "description": "**Ai được gọi:** Chỉ Admin đã đăng nhập.\n\n**Phạm vi:** Tài khoản có accountId trên đường dẫn.\n\nTrả profile và trạng thái tài khoản.",
+        "operationId": "getAdminAccountsAccountid",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin xóa tài khoản",
+        "description": "**Ai được gọi:** Chỉ Admin đã đăng nhập.\n\n**Phạm vi:** Tài khoản có accountId trên đường dẫn, khác tài khoản Admin đang gọi.\n\n**Xử lý xóa:** chuyển tài khoản sang DELETED và chặn đăng nhập/request cần xác thực; giữ tham chiếu lịch sử booking. Gọi lại tài khoản đã xóa trả 204. Không tự hủy booking. Cần chốt cách xử lý Venue thuộc sở hữu và quyền Manager trước khi triển khai.",
+        "operationId": "deleteAdminAccountsAccountid",
+        "responses": {
+          "204": {
+            "description": "Thành công, không có response body."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Admin không được tự xóa tài khoản đang sử dụng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "SELF_DELETE_NOT_ALLOWED",
+                  "message": "Không thể tự xóa tài khoản Admin đang đăng nhập."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/accounts/{accountId}/status": {
+      "parameters": [
+        {
+          "name": "accountId",
+          "in": "path",
+          "required": true,
+          "description": "ID của tài nguyên.",
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin khóa hoặc mở khóa tài khoản",
+        "description": "**Ai được gọi:** Chỉ Admin đã đăng nhập.\n\n**Phạm vi:** Tài khoản có accountId trên đường dẫn, chưa bị xóa.\n\nLOCKED để khóa, ACTIVE để mở khóa. Khóa chặn đăng nhập và request cần xác thực, kể cả khi token còn hạn. Không tự thay đổi booking, quyền sở hữu hoặc bổ nhiệm. Không cho Admin tự khóa mình.",
+        "operationId": "patchAdminAccountsAccountidStatus",
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Tài khoản đã xóa hoặc Admin đang tự khóa mình.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "ACCOUNT_STATUS_CONFLICT",
+                  "message": "Không thể thay đổi trạng thái tài khoản này."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountStatusRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã lỗi ổn định để client xử lý."
+          },
+          "message": {
+            "type": "string",
+            "description": "Thông báo dễ đọc."
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName",
+          "email",
+          "phone",
+          "password",
+          "role"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Nguyễn Minh Anh"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "minhanh@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30,
+            "example": "0901234567",
+            "description": "Server chuẩn hóa sang E.164 (vùng mặc định VN) trước khi lưu và kiểm tra trùng, ví dụ 0901234567 lưu thành +84901234567. Không trùng với tài khoản khác, kể cả tài khoản đã xóa."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "maxLength": 128,
+            "writeOnly": true,
+            "description": "Đề xuất tối thiểu 8 ký tự; không trả password trong response."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "OWNER"
+            ],
+            "description": "Chọn khi đăng ký. Không thể tự đăng ký ADMIN hoặc tự nhận quyền Manager."
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email hoặc số điện thoại đăng ký (định dạng E.164 hoặc nội địa).",
+            "example": "minhanh@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true
+          }
+        }
+      },
+      "AccountProfile": {
+        "type": "object",
+        "description": "Thông tin tài khoản dành cho chính người dùng, Admin hoặc Owner xem Manager đã bổ nhiệm. Owner và Manager xem profile khách đặt sân qua CustomerProfile trong các API booking của Venue.",
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone",
+          "role",
+          "status",
+          "managedVenueIds",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "minhanh@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+84901234567"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "OWNER",
+              "ADMIN"
+            ],
+            "description": "Vai trò tài khoản. Mọi tài khoản có quyền User; quyền Manager được gắn riêng theo từng Venue."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "LOCKED",
+              "DELETED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          },
+          "managedVenueIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "description": "Các Venue đang được bổ nhiệm quản lý. Một Manager có thể quản lý nhiều Venue; không có bổ nhiệm thì trả mảng rỗng.",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "AuthResult": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "account"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT dùng trong Authorization: Bearer <token>."
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Thời hạn token, tính bằng giây.",
+            "example": 3600
+          },
+          "account": {
+            "$ref": "#/components/schemas/AccountProfile"
+          }
+        }
+      },
+      "Recruitment": {
+        "type": "object",
+        "required": [
+          "isOpen",
+          "message"
+        ],
+        "properties": {
+          "isOpen": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "example": "Tuyển quản lý sân ca chiều.",
+            "description": "Thông báo tuyển Manager hiển thị trên trang Venue."
+          }
+        }
+      },
+      "Venue": {
+        "type": "object",
+        "description": "Dữ liệu công khai của Venue. Không chứa profile hoặc thông tin liên hệ cá nhân của Owner/Manager.",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "description",
+          "managerRecruitment"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sân bóng An Phú"
+          },
+          "address": {
+            "type": "string",
+            "example": "12 Đường số 5, TP. Hồ Chí Minh"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cụm sân bóng đá phục vụ đặt sân theo giờ."
+          },
+          "managerRecruitment": {
+            "$ref": "#/components/schemas/Recruitment"
+          }
+        }
+      },
+      "CreateVenueRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "address"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        }
+      },
+      "UpdateVenueRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        }
+      },
+      "Court": {
+        "type": "object",
+        "required": [
+          "id",
+          "venueId",
+          "name",
+          "description",
+          "hourlyRate"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sân 1"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Sân cỏ nhân tạo."
+          },
+          "hourlyRate": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Đơn giá thuê sân mỗi giờ (VND).",
+            "example": 300000
+          }
+        }
+      },
+      "CreateCourtRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "hourlyRate": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Đơn giá thuê sân mỗi giờ (VND).",
+            "example": 300000
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        }
+      },
+      "UpdateCourtRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "hourlyRate": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Đơn giá thuê sân mỗi giờ (VND).",
+            "example": 300000
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        }
+      },
+      "Availability": {
+        "type": "object",
+        "description": "Chỉ phản ánh thời điểm kiểm tra; không giữ chỗ. Không trả booking hoặc thông tin người đặt khác.",
+        "required": [
+          "courtId",
+          "startsAt",
+          "endsAt",
+          "available"
+        ],
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T19:00:00+07:00"
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "CreateBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "courtId",
+          "startsAt",
+          "endsAt"
+        ],
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T19:00:00+07:00"
+          }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "description": "Thông tin booking. API quản lý Venue bổ sung profile người đặt qua BookingWithCustomerProfile.",
+        "required": [
+          "id",
+          "venueId",
+          "courtId",
+          "userId",
+          "startsAt",
+          "endsAt",
+          "totalPrice",
+          "status",
+          "createdAt",
+          "cancelledAt",
+          "cancellationReason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T19:00:00+07:00"
+          },
+          "totalPrice": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tổng tiền thuê sân (VND), tính theo thời lượng và hourlyRate của Court tại thời điểm đặt.",
+            "example": 300000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "CANCELLED"
+            ],
+            "description": "Booking được xác nhận ngay khi tạo thành công."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-18T09:00:00+07:00"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancellationReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lý do khi Owner/Manager hủy booking của khách; null nếu chưa hủy hoặc User tự hủy.",
+            "example": "Sân cần sửa hệ thống chiếu sáng."
+          },
+          "cancelledById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID tài khoản đã thực hiện hủy booking (User hoặc Manager/Owner).",
+            "example": "00000000-0000-4000-8000-000000001004"
+          }
+        }
+      },
+      "CustomerProfile": {
+        "type": "object",
+        "description": "Profile người đã đặt sân, chỉ trả cho Owner sở hữu Venue hoặc Manager đang quản lý Venue chứa booking. Không cho phép xem profile khách chỉ bằng một userId tùy ý.",
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "minhanh@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+84901234567"
+          }
+        }
+      },
+      "BookingWithCustomerProfile": {
+        "description": "Booking kèm profile người đặt, dành riêng cho các API quản lý booking trong Venue.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Booking"
+          },
+          {
+            "type": "object",
+            "required": [
+              "customerProfile"
+            ],
+            "properties": {
+              "customerProfile": {
+                "$ref": "#/components/schemas/CustomerProfile"
+              }
+            }
+          }
+        ]
+      },
+      "UpdateRecruitmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "message bị bỏ qua trong request thì giữ nguyên; null nghĩa là xóa nội dung thông báo.",
+        "required": [
+          "isOpen"
+        ],
+        "properties": {
+          "isOpen": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        }
+      },
+      "ApplyManagerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Trước khi gửi, UI phải hiển thị: Khi ứng tuyển, bạn đồng ý chia sẻ email và số điện thoại đã đăng ký với Owner của Venue này.",
+        "required": [
+          "consentToShareContact"
+        ],
+        "properties": {
+          "consentToShareContact": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Phải là true sau khi User đồng ý. Không gửi false để tạo hồ sơ."
+          }
+        }
+      },
+      "ManagerApplication": {
+        "type": "object",
+        "description": "Biên nhận ứng tuyển. Thời điểm đồng ý được server ghi nhận, không lấy từ client.",
+        "required": [
+          "id",
+          "venueId",
+          "applicantId",
+          "status",
+          "consentToShareContact",
+          "consentedAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "applicantId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "APPOINTED",
+              "REVOKED"
+            ],
+            "description": "SUBMITTED: đã ứng tuyển; APPOINTED: đang được bổ nhiệm; REVOKED: Owner đã thu hồi bổ nhiệm."
+          },
+          "consentToShareContact": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "consentedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          }
+        }
+      },
+      "ApplicantContact": {
+        "type": "object",
+        "description": "Chỉ Owner của Venue có hồ sơ ứng tuyển đã đồng ý chia sẻ được đọc qua danh sách ứng viên.",
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "minhanh@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+84901234567"
+          }
+        }
+      },
+      "OwnerApplicationView": {
+        "type": "object",
+        "required": [
+          "application",
+          "contact"
+        ],
+        "properties": {
+          "application": {
+            "$ref": "#/components/schemas/ManagerApplication"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/ApplicantContact"
+          }
+        }
+      },
+      "AppointManagerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Chọn hồ sơ ứng tuyển thuộc chính Venue này; không bổ nhiệm bằng một userId tùy ý.",
+        "required": [
+          "applicationId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          }
+        }
+      },
+      "ManagerAppointment": {
+        "type": "object",
+        "required": [
+          "id",
+          "venueId",
+          "userId",
+          "appointedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "appointedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          }
+        }
+      },
+      "OwnerManagerView": {
+        "type": "object",
+        "description": "Chỉ Owner đúng Venue được xem profile Manager đã bổ nhiệm.",
+        "required": [
+          "appointment",
+          "profile"
+        ],
+        "properties": {
+          "appointment": {
+            "$ref": "#/components/schemas/ManagerAppointment"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/AccountProfile"
+          }
+        }
+      },
+      "Feedback": {
+        "type": "object",
+        "description": "Nội dung góp ý công khai, không kèm profile hoặc thông tin liên hệ tác giả.",
+        "required": [
+          "id",
+          "venueId",
+          "content",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c703f228-62f7-4ee0-b527-652f8152c026"
+          },
+          "content": {
+            "type": "string",
+            "example": "Sân sạch, dễ tìm đường."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-20T18:00:00+07:00"
+          }
+        }
+      },
+      "CreateFeedbackRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "example": "Sân sạch, dễ tìm đường."
+          }
+        }
+      },
+      "UpdateAccountStatusRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "LOCKED"
+            ],
+            "description": "ACTIVE để mở khóa, LOCKED để khóa. Không dùng để khôi phục tài khoản đã xóa."
+          }
+        }
+      },
+      "CancelCustomerBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Lý do hủy gửi cho người đặt; không chấp nhận chuỗi chỉ có khoảng trắng.",
+            "example": "Sân cần sửa hệ thống chiếu sáng."
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Dữ liệu không hợp lệ hoặc điều kiện nghiệp vụ chưa thỏa.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": "VALIDATION_ERROR",
+              "message": "Dữ liệu gửi lên không hợp lệ."
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Chưa đăng nhập, token hết hạn hoặc không hợp lệ.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": "UNAUTHORIZED",
+              "message": "Cần đăng nhập hoặc đăng nhập lại."
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Đã xác thực nhưng sai vai trò hoặc tài khoản bị khóa.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": "FORBIDDEN",
+              "message": "Tài khoản không có vai trò được phép hoặc đã bị khóa."
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Tài nguyên không tồn tại, đã xóa hoặc nằm ngoài phạm vi dữ liệu được phép truy cập.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": "NOT_FOUND",
+              "message": "Không tìm thấy tài nguyên trong phạm vi được phép truy cập."
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Xung đột dữ liệu hoặc trạng thái hiện tại.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": "CONFLICT",
+              "message": "Thao tác xung đột với trạng thái hiện tại."
+            }
+          }
+        }
+      }
+    }
+  }
+}

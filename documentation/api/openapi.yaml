@@ -471,6 +471,14 @@ paths:
             type: string
             format: date-time
             example: '2026-10-20T19:00:00+07:00'
+        - name: date
+          in: query
+          required: false
+          description: Ngày cần kiểm tra toàn bộ lịch đặt và khung giờ trống dạng YYYY-MM-DD.
+          schema:
+            type: string
+            format: date
+            example: '2026-10-20'
   /venues/{venueId}/feedback:
     parameters:
       - name: venueId
@@ -1362,7 +1370,7 @@ components:
       properties:
         email:
           type: string
-          format: email
+          description: Email hoặc số điện thoại đăng ký (định dạng E.164 hoặc nội địa).
           example: minhanh@example.com
         password:
           type: string
@@ -1694,6 +1702,12 @@ components:
           nullable: true
           description: Lý do khi Owner/Manager hủy booking của khách; null nếu chưa hủy hoặc User tự hủy.
           example: Sân cần sửa hệ thống chiếu sáng.
+        cancelledById:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID tài khoản đã thực hiện hủy booking (User hoặc Manager/Owner).
+          example: 00000000-0000-4000-8000-000000001004
     CustomerProfile:
       type: object
       description: Profile người đã đặt sân, chỉ trả cho Owner sở hữu Venue hoặc Manager đang quản lý Venue chứa
