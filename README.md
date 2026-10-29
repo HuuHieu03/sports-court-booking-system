@@ -33,7 +33,7 @@ Bên trong mỗi module áp dụng **4 tầng Clean Architecture**:
 ### 2.2. Công nghệ sử dụng (Tech Stack)
 * **Backend:** NestJS 10, TypeScript, Prisma ORM 7, bcryptjs, Passport JWT.
 * **Frontend:** React 18, Vite, Tailwind CSS, Lucide React, React Router 6.
-* **Database:** PostgreSQL 17 (chế độ UTC, kiểu dữ liệu thời gian `timestamptz`, hỗ trợ xóa logic `deleted_at`, Partial Indexes và CHECK constraints).
+* **Database:** PostgreSQL 17.
 * **DevOps & Triển khai:** Docker & Docker Compose đa tầng (multi-stage build), NGINX Alpine làm Reverse Proxy mặt tiền phục vụ SPA và điều hướng API `/api/v1/`.
 
 ---
