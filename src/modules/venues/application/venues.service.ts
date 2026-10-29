@@ -211,7 +211,7 @@ export class VenuesService {
   async setRecruitment(
     ownerId: string,
     venueId: string,
-    recruitmentOpen: boolean,
+    recruitmentOpen?: boolean,
     recruitmentMessage?: string | null,
   ): Promise<VenueEntity> {
     const venue = await this.venueRepository.findById(venueId);
@@ -222,7 +222,9 @@ export class VenuesService {
       throw new ForbiddenException('Bạn không phải chủ sở hữu của cụm sân này');
     }
 
-    venue.setRecruitment(recruitmentOpen, recruitmentMessage);
+    const nextOpen = recruitmentOpen !== undefined ? recruitmentOpen : venue.recruitmentOpen;
+    const nextMsg = recruitmentMessage !== undefined ? recruitmentMessage : venue.recruitmentMessage;
+    venue.setRecruitment(nextOpen, nextMsg);
     return this.venueRepository.update(venue);
   }
 

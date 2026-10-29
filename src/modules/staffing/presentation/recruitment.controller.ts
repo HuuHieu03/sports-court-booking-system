@@ -23,7 +23,7 @@ export class RecruitmentController {
     @Param('venueId') venueId: string,
     @Body() dto: RecruitmentToggleDto,
   ) {
-    const isOpen = dto.isOpen !== undefined ? dto.isOpen : (dto.recruitmentOpen ?? false);
+    const isOpen = dto.isOpen !== undefined ? dto.isOpen : dto.recruitmentOpen;
     const message = dto.message !== undefined ? dto.message : dto.recruitmentMessage;
     return this.staffingService.setRecruitment(
       user.userId,

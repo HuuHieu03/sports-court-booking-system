@@ -222,7 +222,7 @@ export const RegisterPage: React.FC = () => {
                     setPassword(e.target.value);
                     if (errorMessage) setErrorMessage('');
                   }}
-                  placeholder="Tối thiểu 6 ký tự"
+                  placeholder="Tối thiểu 8 ký tự"
                   className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs transition-colors"
                 />
               </div>

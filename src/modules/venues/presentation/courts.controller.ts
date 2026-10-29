@@ -127,14 +127,19 @@ export class CourtsController {
 
   @Public()
   @Get('courts/:courtId/availability')
-  @ApiOperation({ summary: 'Kiểm tra sân trống trong khung giờ', operationId: 'getCourtAvailability' })
-  @ApiQuery({ name: 'startsAt', required: true, description: 'Giờ bắt đầu có múi giờ' })
-  @ApiQuery({ name: 'endsAt', required: true, description: 'Giờ kết thúc có múi giờ' })
+  @ApiOperation({ summary: 'Kiểm tra sân trống trong khung giờ hoặc theo ngày', operationId: 'getCourtAvailability' })
+  @ApiQuery({ name: 'startsAt', required: false, description: 'Giờ bắt đầu có múi giờ' })
+  @ApiQuery({ name: 'endsAt', required: false, description: 'Giờ kết thúc có múi giờ' })
+  @ApiQuery({ name: 'date', required: false, description: 'Ngày cần kiểm tra dạng YYYY-MM-DD' })
   async getAvailability(
     @Param('courtId') courtId: string,
     @Query('startsAt') startsAt?: string,
     @Query('endsAt') endsAt?: string,
+    @Query('date') date?: string,
   ) {
+    if (date && !startsAt && !endsAt) {
+      return this.courtsService.getCourtAvailability(courtId, date);
+    }
     if (!startsAt || !endsAt) {
       throw new BadRequestException('startsAt và endsAt là bắt buộc');
     }

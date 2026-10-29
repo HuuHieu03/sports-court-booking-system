@@ -202,6 +202,7 @@ export class BookingsService {
       status: booking.status,
       createdAt: booking.createdAt.toISOString(),
       cancelledAt: booking.cancelledAt ? booking.cancelledAt.toISOString() : null,
+      cancelledById: booking.cancelledById ?? null,
       cancellationReason: booking.cancellationReason ?? null,
       customerProfile: user
         ? {
@@ -306,17 +307,19 @@ export class BookingsService {
   }
 
   async getBookingsForCourtDate(courtId: string, date: Date): Promise<BookingEntity[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const dStr = date.toISOString().split('T')[0];
+    const [y, m, d] = dStr.split('-').map(Number);
+    const startOfVnDay = new Date(Date.UTC(y, m - 1, d - 1, 17, 0, 0, 0));
+    const endOfVnDay = new Date(Date.UTC(y, m - 1, d, 16, 59, 59, 999));
+    const windowStart = new Date(Math.min(startOfVnDay.getTime(), new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0)).getTime()));
+    const windowEnd = new Date(Math.max(endOfVnDay.getTime(), new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999)).getTime()));
 
     const bookings = await this.bookingRepository.findByCourtId(courtId);
     return bookings.filter(
       (b) =>
         b.isConfirmed() &&
-        b.startsAt.getTime() <= endOfDay.getTime() &&
-        b.endsAt.getTime() >= startOfDay.getTime(),
+        b.startsAt.getTime() <= windowEnd.getTime() &&
+        b.endsAt.getTime() >= windowStart.getTime(),
     );
   }
 

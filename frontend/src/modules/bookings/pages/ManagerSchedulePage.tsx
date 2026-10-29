@@ -214,9 +214,16 @@ export const ManagerSchedulePage: React.FC = () => {
                           Hủy sân & Báo khách
                         </button>
                       ) : (
-                        <span className="text-[11px] text-slate-500 italic">
-                          {b.cancellationReason ? `Lý do: ${b.cancellationReason}` : 'Đã hủy'}
-                        </span>
+                        <div className="text-[11px] space-y-0.5">
+                          <span className="text-rose-400 font-semibold block">
+                            {b.cancelledBy === 'USER' ? 'Khách tự hủy' : 'Quản lý sân hủy'}
+                          </span>
+                          {b.cancellationReason && (
+                            <span className="text-slate-400 italic block">
+                              Lý do: {b.cancellationReason}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
